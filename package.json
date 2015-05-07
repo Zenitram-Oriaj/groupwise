@@ -1,0 +1,29 @@
+{
+  "name": "groupwise",
+  "version": "0.0.1",
+  "description": "A simple SOAP client for Novell Groupwise",
+  "engines": {
+    "node": ">=0.8.0"
+  },
+  "author": "Jairo Martinez <jairo@digime.net>",
+  "dependencies": {
+    "soap": "git://github.com/vpulim/node-soap.git"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zenitram-Oriaj/groupwise.git"
+  },
+  "main": "./index.js",
+  "directories": {
+    "lib": "./lib"
+  },
+  "scripts": {},
+  "keywords": [
+    "groupwise, novell"
+  ],
+  "bugs": {
+    "url": "https://github.com/Zenitram-Oriaj/groupwise/issues"
+  },
+  "homepage": "https://github.com/Zenitram-Oriaj/groupwise",
+  "license": "MIT"
+}

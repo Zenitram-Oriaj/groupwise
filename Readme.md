@@ -1,0 +1,1 @@
+A simple node module for connecting to a Novell Groupwise Server using SOAP.
