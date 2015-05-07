@@ -2,3 +2,5 @@
 *.iml
 
 .idea/webResources.xml
+
+.idea/libraries/groupwise_node_modules.xml

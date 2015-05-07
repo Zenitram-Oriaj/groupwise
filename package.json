@@ -9,6 +9,10 @@
   "dependencies": {
     "soap": "git://github.com/vpulim/node-soap.git"
   },
+  "devDependencies": {
+    "soap": "git://github.com/vpulim/node-soap.git"
+  },
+
   "repository": {
     "type": "git",
     "url": "https://github.com/Zenitram-Oriaj/groupwise.git"
@@ -21,11 +25,12 @@
     "test": "node ./test/app"
   },
   "keywords": [
-    "groupwise, novell"
+    "groupwise","novell","soapn"
   ],
   "bugs": {
     "url": "https://github.com/Zenitram-Oriaj/groupwise/issues"
   },
   "homepage": "https://github.com/Zenitram-Oriaj/groupwise",
-  "license": "MIT"
+  "license": "MIT",
+  "readmeFilename": "Readme.md"
 }

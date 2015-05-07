@@ -34,4 +34,14 @@ gws.on('init', function () {
 	});
 });
 
+gws.on('login', function () {
+	gws.GetCalendar(function (err, res) {
+		if (err) {
+			console.error(err);
+		} else {
+			console.info(res);
+		}
+	});
+});
+
 run();

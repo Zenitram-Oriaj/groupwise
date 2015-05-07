@@ -10,6 +10,8 @@ var path = require('path');
 var events = require('events');
 var util = require('util');
 
+var cursor = require('./cursor');
+
 var url = path.join(__dirname, '../wsdl/groupwise.wsdl');
 var endpoint = 'http://localhost:7191/soap';
 var client = {};
@@ -31,97 +33,6 @@ util.inherits(GWS, events.EventEmitter);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-function findKey(obj, val) {
-	for (var n in obj) {
-		if (obj[n] === val)
-			return n;
-	}
-	return null;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-
-function CreateCursor(id, cb) {
-	var args = {
-		container: id
-	};
-
-	client.createCursorRequest(args, function (err, res) {
-		if (err) {
-			console.error(err);
-			cb(err, null)
-		} else {
-			cb(null, res);
-		}
-	});
-}
-
-function CreateCursorWithFilter(args, id, cb) {
-	args = args || {
-			container: id,
-			filter:    {
-				element: {
-					attributes: {
-						type: "FilterEntry"
-					},
-					field:      'modified',
-					value:      new Date(),
-					date:       'Today'
-				}
-			}
-		};
-
-	client.createCursorRequest(args, function (err, res) {
-		if (err) {
-			console.error(err);
-			cb(err, null)
-		} else {
-			cb(null, res);
-		}
-	});
-}
-
-function ReadCursor(id, csr, cnt, cb) {
-	var args = {
-		container: id,
-		cursor:    csr,
-		forward:   false,
-		position:  'end',
-		count:     cnt
-	};
-
-	client.readCursorRequest(args, function (err, res) {
-		if (err) {
-			console.error(err);
-			cb(err, null)
-		} else {
-			console.error('////////////////////////////////////////////////////////');
-			console.info(res.items.item);
-			cb(null, res.items.item);
-		}
-	});
-}
-
-function DeleteCursor(id, csr, cb) {
-	var args = {
-		container: id,
-		cursor:    csr
-	};
-
-	client.destroyCursorRequest(args, function (err, res) {
-		if (err) {
-			console.error(err);
-			cb(err, null)
-		} else {
-			cb(null, res);
-		}
-	});
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-
 function GetAddressBookList() {
 	var args = {};
 
@@ -135,7 +46,7 @@ function GetAddressBookList() {
 	});
 }
 
-function GetFolderList(cb) {
+function getFolderList(cb) {
 	var args = {
 		parent:  'folders',
 		recurse: true,
@@ -145,7 +56,6 @@ function GetFolderList(cb) {
 
 	client.getFolderListRequest(args, function (err, res) {
 		if (err) {
-			console.error(err);
 			cb(err, null);
 		} else {
 			cb(null, res.folders.folder);
@@ -156,33 +66,6 @@ function GetFolderList(cb) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public Methods
 
-function Collect(id, cb) {
-	var csr = 0;
-	var dat = {};
-
-	CreateCursor(id, function (err, res) {
-		if (err) {
-			cb(err, null);
-		} else {
-			csr = res.cursor;
-			ReadCursor(id, csr, 5, function (err, res) {
-				if (err) {
-					cb(err, null);
-				} else {
-					dat = res;
-					DeleteCursor(id, csr, function (err, res) {
-						if (err) {
-							cb(err, null);
-						} else {
-							cb(null, dat);
-						}
-					});
-				}
-			})
-		}
-	});
-}
-
 GWS.prototype.GetAddressBooks = function (cb) {
 
 };
@@ -192,7 +75,7 @@ GWS.prototype.GetAddressBook = function (id, cb) {
 };
 
 GWS.prototype.GetFolders = function (cb) {
-	GetFolderList(function (err, res) {
+	getFolderList(function (err, res) {
 		if (err) {
 			cb(err, null);
 		} else {
@@ -217,6 +100,32 @@ GWS.prototype.GetItem = function (id, cb) {
 
 GWS.prototype.GetCalendar = function (cb) {
 	var e = new ErrObj();
+
+	getFolderList(function (err, res) {
+		if (err) {
+			e.message = 'Failed To Get Folder List For Calendar';
+			e.err = err;
+
+			cb(e, null);
+		} else {
+			var id = '';
+			res.forEach(function (item) {
+				if (item.folderType === 'Calendar') {
+					id = item.id;
+				}
+			});
+
+			if(id){
+				cursor.retrieve(client,id,function(err,res){
+					if(err){
+
+					} else {
+
+					}
+				});
+			}
+		}
+	});
 };
 
 GWS.prototype.init = function (opts, cb) {
@@ -278,6 +187,7 @@ GWS.prototype.login = function (params, cb) {
 				sessionId = res.session;
 				loggedIn = true;
 				client.addSoapHeader('<session xmlns="http://schemas.novell.com/2005/01/GroupWise/types">' + sessionId + '</session>');
+				self.emit('login', res);
 				cb(null, res.userinfo);
 			}
 		});
