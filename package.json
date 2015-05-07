@@ -1,6 +1,6 @@
 {
   "name": "groupwise",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A simple SOAP client for Novell Groupwise",
   "engines": {
     "node": ">=0.8.0"
@@ -12,7 +12,6 @@
   "devDependencies": {
     "soap": "git://github.com/vpulim/node-soap.git"
   },
-
   "repository": {
     "type": "git",
     "url": "https://github.com/Zenitram-Oriaj/groupwise.git"
@@ -25,7 +24,9 @@
     "test": "node ./test/app"
   },
   "keywords": [
-    "groupwise","novell","soapn"
+    "groupwise",
+    "novell",
+    "soapn"
   ],
   "bugs": {
     "url": "https://github.com/Zenitram-Oriaj/groupwise/issues"
