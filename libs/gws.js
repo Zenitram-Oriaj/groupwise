@@ -2,86 +2,42 @@
  * Created by Jairo Martinez on 5/7/15.
  */
 
+/**
+ * Created by Jairo Martinez on 5/7/15.
+ */
 var soap = require('soap');
 var path = require('path');
 var events = require('events');
-var	util = require('util');
+var util = require('util');
 
-var url = path.join(__dirname, './wsdl/groupwise.wsdl');
+var url = path.join(__dirname, '../wsdl/groupwise.wsdl');
+var endpoint = 'http://localhost:7191/soap';
 var client = {};
 var sessionId = '';
 var loggedIn = false;
 
-var gws = {
-	folders: [],
-	books:   []
+var ErrObj = function () {
+	this.message = '';
+	this.params = {};
+	this.err = {};
 };
 
-var GWS = function(wsdl, endpoint, options){
+var GWS = function () {
 	events.EventEmitter.call(this);
-
-	options = options || {};
-	this.wsdl = wsdl;
-	this.client = {};
-	this.sessionId = '';
-	this.loggedIn = false;
 };
+
+util.inherits(GWS, events.EventEmitter);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-function CreateClient(cb) {
-	soap.createClient(url, function (err, c) {
-		if (err) {
-			cb(err, null);
-		} else {
-			cb(null, c);
-		}
-	});
+function findKey(obj, val) {
+	for (var n in obj) {
+		if (obj[n] === val)
+			return n;
+	}
+	return null;
 }
-
-function ClientLogin(user, pass, cb) {
-	var args = {
-		auth:     {
-			attributes: {
-				'xsi_type': {
-					xmlns: 'types',
-					type:  'PlainText'
-				}
-			},
-			username:   user,
-			password:   pass
-		},
-		language: 'en',
-		version:  '1.05',
-		userid:   true
-	};
-
-	client.loginRequest(args, function (err, res) {
-		if (err) {
-			console.error(err);
-		} else {
-			console.error('////////////////////////////////////////////////////////');
-			console.log(res);
-			cb(null, res);
-		}
-	});
-}
-
-function ClientLogOut(cb) {
-	var args = {};
-
-	client.logoutRequest(args, function (err, res) {
-		if (err) {
-			console.error(err);
-		} else {
-			console.error('////////////////////////////////////////////////////////');
-			console.log(res);
-			cb(null, res);
-		}
-	});
-}
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -102,19 +58,19 @@ function CreateCursor(id, cb) {
 }
 
 function CreateCursorWithFilter(args, id, cb) {
-	args =  args || {
-		container: id,
-		filter:    {
-			element: {
-				attributes: {
-					type: "FilterEntry"
-				},
-				field:      'modified',
-				value:      new Date(),
-				date:       'Today'
+	args = args || {
+			container: id,
+			filter:    {
+				element: {
+					attributes: {
+						type: "FilterEntry"
+					},
+					field:      'modified',
+					value:      new Date(),
+					date:       'Today'
+				}
 			}
-		}
-	};
+		};
 
 	client.createCursorRequest(args, function (err, res) {
 		if (err) {
@@ -218,7 +174,7 @@ function Collect(id, cb) {
 						if (err) {
 							cb(err, null);
 						} else {
-							cb(null,dat);
+							cb(null, dat);
 						}
 					});
 				}
@@ -227,18 +183,18 @@ function Collect(id, cb) {
 	});
 }
 
-function GetAddressBooks(cb) {
+GWS.prototype.GetAddressBooks = function (cb) {
 
-}
+};
 
-function GetAddressBook(id, cb) {
+GWS.prototype.GetAddressBook = function (id, cb) {
 
-}
+};
 
-function GetFolders(cb) {
+GWS.prototype.GetFolders = function (cb) {
 	GetFolderList(function (err, res) {
 		if (err) {
-			cb(err,null);
+			cb(err, null);
 		} else {
 			var id = '';
 
@@ -249,40 +205,116 @@ function GetFolders(cb) {
 			});
 		}
 	});
-}
+};
 
-function GetItems(cb) {
+GWS.prototype.GetItems = function (cb) {
+	var e = new ErrObj();
+};
 
-}
+GWS.prototype.GetItem = function (id, cb) {
+	var e = new ErrObj();
+};
 
-function GetItem(id, cb) {
+GWS.prototype.GetCalendar = function (cb) {
+	var e = new ErrObj();
+};
 
-}
+GWS.prototype.init = function (opts, cb) {
+	var self = this;
+	var e = new ErrObj();
 
-function GetCalendar(cb) {
+	if (opts && opts.server) {
+		endpoint = 'http://' + opts.server + '/soap';
+	}
+	if (opts && opts.wsdl) {
+		url = opts.wsdl;
+	}
 
-}
+	soap.createClient(url, function (err, c) {
+		if (err) {
+			e.message = 'Failed To Create SOAP Client';
+			e.err = err;
+			cb(e, null);
+		} else {
+			client = c;
+			client.setEndpoint(endpoint);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
+			self.emit('init',{});
 
-CreateClient(function (err, c) {
-	if (err) {
-		console.error('---------INIT ERROR----------');
-		console.error(err);
-	} else {
-		client = c;
-		client.setEndpoint('http://boi.selfip.com:7191/soap');
+			cb(null, {
+				message: 'Successfully Created Service Client'
+			})
+		}
+	});
+};
 
-		ClientLogin('ao', '!boi123', function (err, res) {
+GWS.prototype.login = function (params, cb) {
+	var e = new ErrObj();
+
+	if (params && params.user && params.pass) {
+		var args = {
+			auth:     {
+				attributes: {
+					'xsi_type': {
+						xmlns: 'types',
+						type:  'PlainText'
+					}
+				},
+				username:   params.user,
+				password:   params.pass
+			},
+			language: 'en',
+			version:  '1.05',
+			userid:   true
+		};
+
+		client.loginRequest(args, function (err, res) {
 			if (err) {
-				console.error(err);
+				e.message = 'Failed To Login';
+				e.err = err;
+				e.params = params;
+				cb(e, null);
 			} else {
 				sessionId = res.session;
 				loggedIn = true;
 				client.addSoapHeader('<session xmlns="http://schemas.novell.com/2005/01/GroupWise/types">' + sessionId + '</session>');
-
+				cb(null, res.userinfo);
 			}
 		});
+	} else {
+		e.message = 'Missing or Incorrect Parameters.';
+		e.params = params;
+		cb(e, null);
 	}
-});
+};
+
+GWS.prototype.logout = function (cb) {
+	var e = new ErrObj();
+
+	if (loggedIn) {
+		var args = {};
+		client.logoutRequest(args, function (err, res) {
+			if (err) {
+				var e = {
+					message: 'Failed To Logout',
+					err:     err
+				};
+				cb(e, null);
+			} else {
+				sessionId = '';
+				loggedIn = false;
+				client.clearSoapHeaders();
+				cb(null, res.userinfo);
+			}
+		});
+	} else {
+		e.message = 'Not Logged In To Server';
+		cb(e, null);
+	}
+
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+module.exports = GWS;

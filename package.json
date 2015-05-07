@@ -17,7 +17,9 @@
   "directories": {
     "lib": "./lib"
   },
-  "scripts": {},
+  "scripts": {
+    "test": "node ./test/app"
+  },
   "keywords": [
     "groupwise, novell"
   ],
