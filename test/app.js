@@ -22,23 +22,44 @@ function run() {
 gws.on('init', function () {
 	var args = {
 		user: 'ao',
-		pass: '!boi123'
+		pass: '!boi23'
 	};
 
 	gws.login(args, function (err, res) {
 		if (err) {
 			console.error(err);
 		} else {
+			console.error('//////////////////////////////////////////////////////');
 			console.info(res);
 		}
 	});
 });
 
 gws.on('login', function () {
+
+	gws.GetFolders(function(err,res){
+		if (err) {
+			console.error(err);
+		} else {
+			console.error('//////////////////////////////////////////////////////');
+			console.info(res);
+		}
+	});
+
+	gws.GetGlobalAddressBook(function(err,res){
+		if (err) {
+			console.error(err);
+		} else {
+			console.error('//////////////////////////////////////////////////////');
+			console.info(res);
+		}
+	});
+
 	gws.GetCalendar(function (err, res) {
 		if (err) {
 			console.error(err);
 		} else {
+			console.error('//////////////////////////////////////////////////////');
 			console.info(res);
 		}
 	});

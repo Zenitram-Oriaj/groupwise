@@ -33,27 +33,24 @@ util.inherits(GWS, events.EventEmitter);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-function GetAddressBookList() {
+function _getAddressBookList(cb) {
 	var args = {};
-
 	client.getAddressBookListRequest(args, function (err, res) {
 		if (err) {
-			console.error(err);
 			cb(err, null);
 		} else {
-			cb(null, res);
+			cb(null, res.books.book);
 		}
 	});
 }
 
-function getFolderList(cb) {
+function _getFolderList(cb) {
 	var args = {
 		parent:  'folders',
 		recurse: true,
 		imap:    false,
 		nntp:    false
 	};
-
 	client.getFolderListRequest(args, function (err, res) {
 		if (err) {
 			cb(err, null);
@@ -67,45 +64,92 @@ function getFolderList(cb) {
 // Public Methods
 
 GWS.prototype.GetAddressBooks = function (cb) {
+	var e = new ErrObj();
 
-};
-
-GWS.prototype.GetAddressBook = function (id, cb) {
-
-};
-
-GWS.prototype.GetFolders = function (cb) {
-	getFolderList(function (err, res) {
+	_getAddressBookList(function(err,res){
 		if (err) {
-			cb(err, null);
+			e.message = 'Failed To Get Address Book List';
+			e.err = err;
+			cb(e, null);
 		} else {
-			var id = '';
-
-			res.forEach(function (item) {
-				if (item.folderType === 'Calendar') {
-					id = item.id;
-				}
-			});
+			cb(null,res);
 		}
 	});
 };
 
-GWS.prototype.GetItems = function (cb) {
+GWS.prototype.GetAddressBook = function (id, cb) {
 	var e = new ErrObj();
+
+	if(id.length > 0){
+		cursor.retrieve(client,id,function(err,res){
+			if(err){
+				e.message = 'Failed To Get Address Book';
+				e.err = err;
+				cb(e, null);
+			} else {
+				cb(null,res);
+			}
+		});
+	} else {
+		e.message = 'No ID was passed in';
+		cb(e, null);
+	}
 };
 
-GWS.prototype.GetItem = function (id, cb) {
+GWS.prototype.GetGlobalAddressBook = function (cb) {
 	var e = new ErrObj();
+
+	_getAddressBookList(function(err,res){
+		if (err) {
+			e.message = 'Failed To Get Address Book List';
+			e.err = err;
+			cb(e, null);
+		} else {
+			var id = '';
+			res.forEach(function(item){
+				if(item.name === 'GroupWise Address Book'){
+					id = item.id;
+				}
+			});
+			if(id.length > 0){
+				cursor.retrieve(client,id,function(err,res){
+					if(err){
+						e.message = 'Failed To Get Global Address Book';
+						e.err = err;
+						cb(e, null);
+					} else {
+						cb(null,res);
+					}
+				});
+			} else {
+				e.message = 'Failed To Find Global Address Book In Address List';
+				cb(e, null);
+			}
+		}
+	});
+};
+
+GWS.prototype.GetFolders = function (cb) {
+	var e = new ErrObj();
+
+	_getFolderList(function (err, res) {
+		if (err) {
+			e.message = 'Failed To Get Folder List';
+			e.err = err;
+			cb(e, null);
+		} else {
+			cb(null,res);
+		}
+	});
 };
 
 GWS.prototype.GetCalendar = function (cb) {
 	var e = new ErrObj();
 
-	getFolderList(function (err, res) {
+	_getFolderList(function (err, res) {
 		if (err) {
-			e.message = 'Failed To Get Folder List For Calendar';
+			e.message = 'Failed To Get Folder List For Calendar Request';
 			e.err = err;
-
 			cb(e, null);
 		} else {
 			var id = '';
@@ -115,14 +159,19 @@ GWS.prototype.GetCalendar = function (cb) {
 				}
 			});
 
-			if(id){
+			if(id.length > 0){
 				cursor.retrieve(client,id,function(err,res){
 					if(err){
-
+						e.message = 'Failed To Get Calendar Events';
+						e.err = err;
+						cb(e, null);
 					} else {
-
+						cb(null,res);
 					}
 				});
+			} else {
+				e.message = 'Failed To Find Calendar In Folders';
+				cb(e, null);
 			}
 		}
 	});
@@ -158,6 +207,7 @@ GWS.prototype.init = function (opts, cb) {
 };
 
 GWS.prototype.login = function (params, cb) {
+	var self = this;
 	var e = new ErrObj();
 
 	if (params && params.user && params.pass) {
@@ -184,11 +234,18 @@ GWS.prototype.login = function (params, cb) {
 				e.params = params;
 				cb(e, null);
 			} else {
-				sessionId = res.session;
-				loggedIn = true;
-				client.addSoapHeader('<session xmlns="http://schemas.novell.com/2005/01/GroupWise/types">' + sessionId + '</session>');
-				self.emit('login', res);
-				cb(null, res.userinfo);
+				if(res.status.code === 0) {
+					sessionId = res.session;
+					loggedIn = true;
+					client.addSoapHeader('<session xmlns="http://schemas.novell.com/2005/01/GroupWise/types">' + sessionId + '</session>');
+					self.emit('login', res);
+					cb(null, res.userid);
+				} else {
+					e.message = 'Failed To Login To Server';
+					e.err = res;
+					cb(e,null);
+				}
+
 			}
 		});
 	} else {
@@ -199,26 +256,27 @@ GWS.prototype.login = function (params, cb) {
 };
 
 GWS.prototype.logout = function (cb) {
+	var self = this;
 	var e = new ErrObj();
 
 	if (loggedIn) {
 		var args = {};
 		client.logoutRequest(args, function (err, res) {
 			if (err) {
-				var e = {
-					message: 'Failed To Logout',
-					err:     err
-				};
+				e.message = 'Failed To Logout';
+				e.err = err;
 				cb(e, null);
 			} else {
 				sessionId = '';
 				loggedIn = false;
 				client.clearSoapHeaders();
-				cb(null, res.userinfo);
+				self.emit('logout', res);
+				cb(null, res);
 			}
 		});
 	} else {
 		e.message = 'Not Logged In To Server';
+		self.emit('error', e);
 		cb(e, null);
 	}
 
