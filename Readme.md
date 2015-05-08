@@ -5,6 +5,23 @@ It was written primarily for the purpose of get a "Resource" calendar's events t
 Currently this module is not fully functioning. Do not use until notified.
 This is my very first public module, so it may have lots of issues and not well written. Its a learning process.
 
+---------------------
+
+How To Use:
+
+(Note: you will need to have a git client installed prior, as the soap module being used it pulled directly from Github.)
+```
+npm install groupwise
+
+```
+
+In your app.js file:
+
+```
+var GWS = require('groupwise');
+var gws = new GWS();
+
+```
 
 On method callbacks, the error object this contain these parameters:
  - message: A general statement of the error
