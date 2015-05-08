@@ -63,7 +63,7 @@ function _getFolderList(cb) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public Methods
 
-GWS.prototype.GetAddressBooks = function (cb) {
+GWS.prototype.getAddressBooks = function (cb) {
 	var e = new ErrObj();
 
 	_getAddressBookList(function(err,res){
@@ -77,7 +77,7 @@ GWS.prototype.GetAddressBooks = function (cb) {
 	});
 };
 
-GWS.prototype.GetAddressBook = function (id, cb) {
+GWS.prototype.getAddressBook = function (id, cb) {
 	var e = new ErrObj();
 
 	if(id.length > 0){
@@ -96,7 +96,7 @@ GWS.prototype.GetAddressBook = function (id, cb) {
 	}
 };
 
-GWS.prototype.GetGlobalAddressBook = function (cb) {
+GWS.prototype.getGlobalAddressBook = function (cb) {
 	var e = new ErrObj();
 
 	_getAddressBookList(function(err,res){
@@ -129,7 +129,7 @@ GWS.prototype.GetGlobalAddressBook = function (cb) {
 	});
 };
 
-GWS.prototype.GetFolders = function (cb) {
+GWS.prototype.getFolders = function (cb) {
 	var e = new ErrObj();
 
 	_getFolderList(function (err, res) {
@@ -143,7 +143,7 @@ GWS.prototype.GetFolders = function (cb) {
 	});
 };
 
-GWS.prototype.GetCalendar = function (cb) {
+GWS.prototype.getCalendar = function (cb) {
 	var e = new ErrObj();
 
 	_getFolderList(function (err, res) {

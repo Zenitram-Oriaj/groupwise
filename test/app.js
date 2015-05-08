@@ -37,7 +37,7 @@ gws.on('init', function () {
 
 gws.on('login', function () {
 
-	gws.GetFolders(function(err,res){
+	gws.getFolders(function(err,res){
 		if (err) {
 			console.error(err);
 		} else {
@@ -46,7 +46,7 @@ gws.on('login', function () {
 		}
 	});
 
-	gws.GetGlobalAddressBook(function(err,res){
+	gws.getGlobalAddressBook(function(err,res){
 		if (err) {
 			console.error(err);
 		} else {
@@ -55,7 +55,7 @@ gws.on('login', function () {
 		}
 	});
 
-	gws.GetCalendar(function (err, res) {
+	gws.getCalendar(function (err, res) {
 		if (err) {
 			console.error(err);
 		} else {
