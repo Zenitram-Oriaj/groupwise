@@ -5,6 +5,17 @@
 var GWS = require('../libs/gws');
 var gws = new GWS();
 
+function collect(){
+	gws.getCalendar(function (err, res) {
+		if (err) {
+			console.error(err);
+		} else {
+			console.error('////////////////   GET CALENDAR   ///////////////');
+			console.info(res);
+		}
+	});
+}
+
 function run() {
 	var opts = {
 		server: '172.16.76.2:7191'
@@ -22,47 +33,42 @@ function run() {
 gws.on('init', function () {
 	var args = {
 		user: 'ao',
-		pass: '!boi23'
+		pass: '!boi123'
 	};
 
 	gws.login(args, function (err, res) {
 		if (err) {
 			console.error(err);
 		} else {
-			console.error('//////////////////////////////////////////////////////');
+			console.error('///////////////////   LOGIN   ///////////////////');
 			console.info(res);
 		}
 	});
 });
 
 gws.on('login', function () {
+	var args = {
+		user: 'ao',
+		pass: '!boi123',
+		proxy: 'Conference Room 1'
+	};
 
-	gws.getFolders(function(err,res){
+	gws.proxyLogin(args, function (err, res) {
 		if (err) {
 			console.error(err);
 		} else {
-			console.error('//////////////////////////////////////////////////////');
+			console.error('///////////////////   PROXY   ///////////////////');
 			console.info(res);
 		}
 	});
+});
 
-	gws.getGlobalAddressBook(function(err,res){
-		if (err) {
-			console.error(err);
-		} else {
-			console.error('//////////////////////////////////////////////////////');
-			console.info(res);
-		}
-	});
+gws.on('proxy', function () {
+	collect();
+});
 
-	gws.getCalendar(function (err, res) {
-		if (err) {
-			console.error(err);
-		} else {
-			console.error('//////////////////////////////////////////////////////');
-			console.info(res);
-		}
-	});
+gws.on('error', function (e) {
+
 });
 
 run();

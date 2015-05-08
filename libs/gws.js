@@ -17,11 +17,32 @@ var endpoint = 'http://localhost:7191/soap';
 var client = {};
 var sessionId = '';
 var loggedIn = false;
+var loggedInProxy = false;
+
+var userinfo = {
+	name: '',
+	email: '',
+	uuid: '',
+	userid: '',
+	domain: '',
+	postOffice: '',
+	fid: ''
+};
+
+var creds = {
+	user: '',
+	pass: '',
+	prxy: ''
+};
+
+var Filter = require('./filter');
 
 var ErrObj = function () {
 	this.message = '';
+	this.code = 0;
 	this.params = {};
-	this.err = {};
+	this.subErr = {};
+
 };
 
 var GWS = function () {
@@ -32,6 +53,51 @@ util.inherits(GWS, events.EventEmitter);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+function _getDateTimeStr(dt) {
+	var yy = dt.getFullYear();
+	var mm = dt.getMonth() + 1;
+	var dd = dt.getDate();
+
+	var hh = dt.getHours();
+	var nn = dt.getMinutes();
+
+	if (dd < 10) dd = '0' + dd;
+	if (mm < 10) mm = '0' + mm;
+	if (hh < 10) hh = '0' + hh;
+	if (nn < 10) nn = '0' + nn;
+
+	return yy + '-' + mm + '-' + dd + 'T' + hh + ':' + nn + ':00.000';
+}
+
+function _login(args,cb){
+	var e = new ErrObj();
+	client.loginRequest(args, function (err, res) {
+		if (err) {
+			e.message = 'Failed To Login';
+			e.subErr = err;
+			e.params = params;
+			cb(e, null);
+		} else {
+			if(res.status.code === 0) {
+				sessionId = res.session;
+				loggedIn = true;
+
+				client.clearSoapHeaders();
+				client.addSoapHeader('<session xmlns="http://schemas.novell.com/2005/01/GroupWise/types">' + sessionId + '</session>');
+
+				userinfo = res.userinfo;
+
+				cb(null, res);
+			} else {
+				e.message = 'Failed To Login To Server';
+				e.subErr = res;
+				e.code = res.status.code;
+				cb(e,null);
+			}
+
+		}
+	});
+}
 
 function _getAddressBookList(cb) {
 	var args = {};
@@ -60,6 +126,66 @@ function _getFolderList(cb) {
 	});
 }
 
+function _getTimezoneList(cb){
+	var args = {};
+	client.getTimezoneListRequest(args,function(err,res){
+		if (err) {
+			cb(err, null);
+		} else {
+			cb(null, res.folders.folder);
+		}
+	})
+}
+
+function _getSettings(cb) {
+	var args = {};
+	client._getSettingsRequest(args,function(err,res){
+		if (err) {
+			cb(err, null);
+		} else {
+			cb(null, res);
+		}
+	})
+}
+
+function _getItem(id, cb) {
+	var args = {
+		id: id
+	};
+	client._getSettingsRequest(args,function(err,res){
+		if (err) {
+			cb(err, null);
+		} else {
+			cb(null, res);
+		}
+	});
+}
+
+function _modifyItem(id, cb){
+	/*
+	 <modifyItemRequest>
+	 <id type="types:uid"/>
+	 <notification type="types:SharedFolderNotification"/> <updates type="types:ItemChanges"/> <recurrenceAllInstances type="unsignedInt"/>
+	 </modifyItemRequest>
+	 */
+
+	var args = {
+		id: id,
+		updates: {
+			update: {
+
+			}
+		}
+	};
+
+	client.modifyItemRequest(args,function(err,res){
+		if (err) {
+			cb(err, null);
+		} else {
+			cb(null, res);
+		}
+	})
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public Methods
 
@@ -69,7 +195,7 @@ GWS.prototype.getAddressBooks = function (cb) {
 	_getAddressBookList(function(err,res){
 		if (err) {
 			e.message = 'Failed To Get Address Book List';
-			e.err = err;
+			e.subErr = err;
 			cb(e, null);
 		} else {
 			cb(null,res);
@@ -84,7 +210,7 @@ GWS.prototype.getAddressBook = function (id, cb) {
 		cursor.retrieve(client,id,function(err,res){
 			if(err){
 				e.message = 'Failed To Get Address Book';
-				e.err = err;
+				e.subErr = err;
 				cb(e, null);
 			} else {
 				cb(null,res);
@@ -102,7 +228,7 @@ GWS.prototype.getGlobalAddressBook = function (cb) {
 	_getAddressBookList(function(err,res){
 		if (err) {
 			e.message = 'Failed To Get Address Book List';
-			e.err = err;
+			e.subErr = err;
 			cb(e, null);
 		} else {
 			var id = '';
@@ -115,7 +241,7 @@ GWS.prototype.getGlobalAddressBook = function (cb) {
 				cursor.retrieve(client,id,function(err,res){
 					if(err){
 						e.message = 'Failed To Get Global Address Book';
-						e.err = err;
+						e.subErr = err;
 						cb(e, null);
 					} else {
 						cb(null,res);
@@ -135,7 +261,7 @@ GWS.prototype.getFolders = function (cb) {
 	_getFolderList(function (err, res) {
 		if (err) {
 			e.message = 'Failed To Get Folder List';
-			e.err = err;
+			e.subErr = err;
 			cb(e, null);
 		} else {
 			cb(null,res);
@@ -149,7 +275,7 @@ GWS.prototype.getCalendar = function (cb) {
 	_getFolderList(function (err, res) {
 		if (err) {
 			e.message = 'Failed To Get Folder List For Calendar Request';
-			e.err = err;
+			e.subErr = err;
 			cb(e, null);
 		} else {
 			var id = '';
@@ -160,15 +286,22 @@ GWS.prototype.getCalendar = function (cb) {
 			});
 
 			if(id.length > 0){
+				var dt = _getDateTimeStr(new Date());
+				var filter = new Filter();
+
+				filter.element.op  = 'gt';
+				filter.element.field = 'startDate';
+				filter.element.value = dt;
+
 				cursor.retrieve(client,id,function(err,res){
 					if(err){
 						e.message = 'Failed To Get Calendar Events';
-						e.err = err;
+						e.subErr = err;
 						cb(e, null);
 					} else {
 						cb(null,res);
 					}
-				});
+				}, filter);
 			} else {
 				e.message = 'Failed To Find Calendar In Folders';
 				cb(e, null);
@@ -191,7 +324,7 @@ GWS.prototype.init = function (opts, cb) {
 	soap.createClient(url, function (err, c) {
 		if (err) {
 			e.message = 'Failed To Create SOAP Client';
-			e.err = err;
+			e.subErr = err;
 			cb(e, null);
 		} else {
 			client = c;
@@ -227,30 +360,57 @@ GWS.prototype.login = function (params, cb) {
 			userid:   true
 		};
 
-		client.loginRequest(args, function (err, res) {
-			if (err) {
-				e.message = 'Failed To Login';
-				e.err = err;
-				e.params = params;
-				cb(e, null);
+		_login(args,function(err,res){
+			if(err){
+				self.emit('error', err);
+				cb(err,null)
 			} else {
-				if(res.status.code === 0) {
-					sessionId = res.session;
-					loggedIn = true;
-					client.addSoapHeader('<session xmlns="http://schemas.novell.com/2005/01/GroupWise/types">' + sessionId + '</session>');
-					self.emit('login', res);
-					cb(null, res.userid);
-				} else {
-					e.message = 'Failed To Login To Server';
-					e.err = res;
-					cb(e,null);
-				}
-
+				self.emit('login', res);
+				cb(null,res);
 			}
 		});
 	} else {
 		e.message = 'Missing or Incorrect Parameters.';
 		e.params = params;
+		self.emit('error', e);
+		cb(e, null);
+	}
+};
+
+GWS.prototype.proxyLogin = function (params, cb) {
+	var self = this;
+	var e = new ErrObj();
+
+	if (loggedIn && params && params.proxy) {
+		var proxy = params.proxy + '.' + userinfo.postOffice + '.' + userinfo.domain;
+		var args = {
+			auth:     {
+				attributes: {
+					'xsi_type': {
+						xmlns: 'types',
+						type:  'Proxy'
+					}
+				},
+				username:   params.user,
+				password:   params.pass,
+				proxy: proxy
+			},
+			userid:   true
+		};
+
+		_login(args,function(err,res){
+			if(err){
+				self.emit('error', err);
+				cb(err,null)
+			} else {
+				self.emit('proxy', res);
+				cb(null,res);
+			}
+		});
+	} else {
+		e.message = 'Missing or Incorrect Parameters.';
+		e.params = params;
+		self.emit('error', e);
 		cb(e, null);
 	}
 };
@@ -264,7 +424,8 @@ GWS.prototype.logout = function (cb) {
 		client.logoutRequest(args, function (err, res) {
 			if (err) {
 				e.message = 'Failed To Logout';
-				e.err = err;
+				e.subErr = err;
+				self.emit('error', e);
 				cb(e, null);
 			} else {
 				sessionId = '';

@@ -4,10 +4,15 @@
 
 var client = {};
 
-var CreateCursor = function (id, cb) {
+var CreateCursor = function (id, cb, filter) {
+
 	var args = {
 		container: id
 	};
+
+	if (filter) {
+		args.filter = filter;
+	}
 
 	client.createCursorRequest(args, function (err, res) {
 		if (err) {
@@ -19,30 +24,12 @@ var CreateCursor = function (id, cb) {
 	});
 };
 
-/*
-
- args = args || {
-	 container: id,
-		 filter:    {
-			 element: {
-				 attributes: {
-				  type: "FilterEntry"
-			 },
-		 field:      'modified',
-		 value:      new Date(),
-		 date:       'Today'
-		 }
-	 }
- };
-
- */
-
 function ReadCursor(id, csr, cnt, cb) {
 	var args = {
 		container: id,
 		cursor:    csr,
 		forward:   false,
-		position:  'end',
+		position:  'start',
 		count:     cnt
 	};
 
@@ -69,15 +56,11 @@ function DeleteCursor(id, csr, cb) {
 	});
 }
 
-module.exports.retrieve = function (c, id, cb, params) {
+module.exports.retrieve = function (c, id, cb, filter) {
 	var csr = 0;
 	var dat = {};
 	var cnt = 5;
 	client = c;
-
-	if(params){
-
-	}
 
 	CreateCursor(id, function (err, res) {
 		if (err) {
@@ -99,5 +82,5 @@ module.exports.retrieve = function (c, id, cb, params) {
 				}
 			})
 		}
-	});
+	}, filter);
 };
