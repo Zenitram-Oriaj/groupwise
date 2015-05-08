@@ -12,7 +12,6 @@ How To Use:
 (Note: you will need to have a git client installed prior, as the soap module being used it pulled directly from Github.)
 ```
 npm install groupwise
-
 ```
 
 In your app.js file:
@@ -20,7 +19,6 @@ In your app.js file:
 ```
 var GWS = require('groupwise');
 var gws = new GWS();
-
 ```
 
 On method callbacks, the error object this contain these parameters:
