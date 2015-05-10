@@ -122,8 +122,8 @@ GroupWise Methods:
      }
    });
  ```
- ---------------------
-  - getResources(): Will return any item from the global address book that is marked as a resource.
+---------------------
+ - getResources(): Will return any item from the global address book that is marked as a resource.
   
   ```
    gws.getResources(function (err, res) {
