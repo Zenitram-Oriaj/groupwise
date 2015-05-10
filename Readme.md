@@ -104,6 +104,13 @@ GroupWise Methods:
  - getFolders()
  
  ```
+  gws.getFolders(function (err, res) {
+     if(err) {
+       //...
+     } else {
+       //...
+     }
+   });
  ```
  ---------------------
  - getCalendar(): Returns calendar events for the main calendar
@@ -117,7 +124,7 @@ GroupWise Methods:
   });
  ```
  If you want to filter your results, then use the opts object.
- - Here I want to get events from 2 days ago and newer
+ -> Here I want to get events from 2 days ago and newer
  ```
 	 var dt = new Date();
 	 dt.setDate(dt.getDate() - 2);
@@ -141,20 +148,28 @@ GroupWise Methods:
  ---------------------
  - getGlobalAddressBook()
  ```
-  gws.getGlobalAddressBook(function(err,res){
-    if(err){
+  gws.getGlobalAddressBook(function (err, res) {
+    if(err) {
+      //...
     } else {
+      //...
     }
   });
  ```
- 
-On method callbacks, the error object this contain these parameters:
+
+(NOTE:  More methods are coming in the following days.)
+
+---------------------
+GroupWise Callbacks:
+---------------------
+
+On method callbacks, if there is an error, the error object this contain these parameters:
  - message: A general statement of the error
  - code: a number value representing the error.
  - subErr: If the error was produced by a dependency module, its error will be placed into here
  - params: Contains the parameters that was passed into the method.
  
- More methods are coming in the following days.
+
  
 ---------------------
 GroupWise Events:
