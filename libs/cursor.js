@@ -59,7 +59,7 @@ function DeleteCursor(id, csr, cb) {
 module.exports.retrieve = function (c, id, cb, filter) {
 	var csr = 0;
 	var dat = {};
-	var cnt = 5;
+	var cnt = 50;
 	client = c;
 
 	CreateCursor(id, function (err, res) {

@@ -29,6 +29,22 @@ function collect(){
 	});
 }
 
+function ProxyLogin(){
+
+	var args = {
+		proxy: 'Conference Room 1'
+	};
+
+	gws.proxyLogin(args, function (err, res) {
+		if (err) {
+			console.error(err);
+		} else {
+			console.info(res);
+			collect();
+		}
+	});
+}
+
 function run() {
 	var args = {
 		server: '172.16.76.2',            // Required
@@ -54,16 +70,11 @@ function run() {
 				} else {
 					console.info(res);
 
-					var args = {
-						proxy: 'Conference Room 1'
-					};
-
-					gws.proxyLogin(args, function (err, res) {
-						if (err) {
+					gws.getResources(function(err,res){
+						if(err){
 							console.error(err);
 						} else {
 							console.info(res);
-							collect();
 						}
 					});
 				}

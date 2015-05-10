@@ -327,6 +327,46 @@ GWS.prototype.getGlobalAddressBook = function (cb) {
 	});
 };
 
+GWS.prototype.getResources = function(cb){
+	var e = new error.obj();
+
+	_getAddressBookList(function (err, res) {
+		if (err) {
+			e.message = 'Failed To Get Address Book List';
+			e.subErr = err;
+			cb(e, null);
+		} else {
+			var id = '';
+			res.forEach(function (item) {
+				if (item.name === 'GroupWise Address Book') {
+					id = item.id;
+				}
+			});
+			if (id.length > 0) {
+				cursor.retrieve(client, id, function (err, res) {
+					if (err) {
+						e.message = 'Failed To Get Global Address Book';
+						e.subErr = err;
+						cb(e, null);
+					} else {
+						var resources = [];
+						res.forEach(function(u){
+							if(u.attributes['xsi:type'] == 'gwt:Resource'){
+								resources.push(u);
+							}
+						});
+
+						cb(null,resources);
+					}
+				});
+			} else {
+				e.message = 'Failed To Find Global Address Book In Address List';
+				cb(e, null);
+			}
+		}
+	});
+};
+
 GWS.prototype.getFolders = function (cb) {
 	var e = new error.obj();
 

@@ -10,7 +10,7 @@ Expect changes to how it operates to occur.
 Additional Documentation:
 =========================
 Novell GroupWise SOAP Service Documentation available at:
-[link] (https://www.novell.com/developer/ndk/groupwise/groupwise_web_service_%28soap%29.html)
+[Novell Developer] (https://www.novell.com/developer/ndk/groupwise/groupwise_web_service_%28soap%29.html)
 
 
 ---------------------
@@ -105,12 +105,12 @@ GroupWise Methods:
  ```
 ---------------------
  - getDateTimeStr(): Formats the Date Time Object into a specific string.
-```
- // Date of example was May 8th, 2015 at 11:34 PDT
- var dts = gws.getDateTimeStr(new Date()); 
- // dts = 2015-05-08T11:34:00.000
-```
- ---------------------
+	```
+    // Date of example was May 8th, 2015 at 11:34 PDT
+    var dts = gws.getDateTimeStr(new Date()); 
+    // dts = 2015-05-08T11:34:00.000
+	```
+---------------------
  - getFolders()
  
  ```
@@ -123,6 +123,18 @@ GroupWise Methods:
    });
  ```
  ---------------------
+  - getResources(): Will return any item from the global address book that is marked as a resource.
+  
+  ```
+   gws.getResources(function (err, res) {
+      if(err) {
+        //...
+      } else {
+        //...
+      }
+    });
+  ```
+---------------------
  - getCalendar(): Returns calendar events for the main calendar
  ```
   gws.getCalendar(function (err, res) {
@@ -136,28 +148,27 @@ GroupWise Methods:
  If you want to filter your results, then use the opts object.  
  *Here I want to get events from 2 days ago and newer*
  ```
-	 var dt = new Date();
-	 dt.setDate(dt.getDate() - 2);
-	 var dts = gws.getDateTimeStr(dt);
-	 
-	 var opts = {
-	  op: 'gt',                               // gt, lt, eq, contains
+  var dt = new Date();
+	dt.setDate(dt.getDate() - 2);
+	var dts = gws.getDateTimeStr(dt);  
+	var opts = {
+		op: 'gt',                               // gt, lt, eq, contains
 	  field: 'startDate',
 	  value: dts
-	 };
+	};
 	 
-	 gws.getCalendar(opts, function (err, res) {
-	  if (err) {
+	gws.getCalendar(opts, function (err, res) {
+		if (err) {
 	    console.error(err);
 	  } else {
 	    console.info(res);
 	  }
-	 });
+	});
  ```
  
- ---------------------
+---------------------
  - getGlobalAddressBook()
- ```
+```
   gws.getGlobalAddressBook(function (err, res) {
     if(err) {
       //...
@@ -165,7 +176,7 @@ GroupWise Methods:
       //...
     }
   });
- ```
+```
 
 (NOTE:  More methods are coming in the following days.)
 
