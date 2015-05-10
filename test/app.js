@@ -17,11 +17,11 @@ function collect(){
 }
 
 function run() {
-	var opts = {
+	var args = {
 		server: '172.16.76.2:7191'
 	};
 
-	gws.init(opts, function (err, res) {
+	gws.init(args, function (err, res) {
 		if (err) {
 			console.error(err);
 		} else {
