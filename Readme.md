@@ -191,7 +191,7 @@ On method callbacks, if there is an error, the error object this contain these p
  - subErr: If the error was produced by a dependency module, its error will be placed into here
  - params: Contains the parameters that was passed into the method.
  
-
+---------------------
 
 GroupWise Events:
 ======================
