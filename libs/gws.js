@@ -18,7 +18,6 @@ var endpoint = 'http://localhost:7191/soap';
 var client = {};
 var sessionId = '';
 var loggedIn = false;
-var loggedInProxy = false;
 
 var userinfo = {
 	name:       '',
@@ -48,6 +47,28 @@ util.inherits(GWS, events.EventEmitter);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
+function _setFilter(opts){
+	var filter = new Filter();
+
+	filter.element.op = opts.op;
+	filter.element.field = opts.field;
+	filter.element.value = opts.value;
+	if(opts.date) filter.element.date = opts.date;
+
+	return filter;
+}
+
+function _getId(res,ref){
+	var id = '';
+	res.forEach(function (item) {
+		if (item.folderType == ref) {
+			id = item.id;
+		}
+	});
+
+	return id;
+}
 
 function _checkSetParams(params, type) {
 	if (params) {
@@ -335,43 +356,31 @@ GWS.prototype.getCalendar = function (opts, cb) {
 			e.subErr = err;
 			cb(e, null);
 		} else {
-			var id = '';
-			res.forEach(function (item) {
-				if (item.folderType === 'Calendar') {
-					id = item.id;
-				}
-			});
-
+			var id = _getId(res,'Calendar');
 			if (id.length > 0) {
-				var filter = new Filter();
-
 				if(opts) {
-					filter.element.op = opts.op;
-					filter.element.field = opts.field;
-					filter.element.value = opts.value;
-					if(opts.date) filter.element.date = opts.date;
-				} else {
-					filter = null;
-				}
-//				cursor.retrieve(client, id, function (err, res) {
-//					if (err) {
-//						e.message = 'Failed To Get Calendar Events';
-//						e.subErr = err;
-//						cb(e, null);
-//					} else {
-//						cb(null, res);
-//					}
-//				}, filter);
-				_getItems(id, filter, function(err,res){
-					if (err) {
-						e.message = 'Failed To Get Calendar Events';
-						e.subErr = err;
-						cb(e, null);
-					} else {
-						cb(null, res);
-					}
-				});
+					var filter = _setFilter(opts);
 
+					_getItems(id, filter, function(err,res){
+						if (err) {
+							e.message = 'Failed To Get Calendar Events';
+							e.subErr = err;
+							cb(e, null);
+						} else {
+							cb(null, res);
+						}
+					});
+				} else {
+					cursor.retrieve(client, id, function (err, res) {
+						if (err) {
+							e.message = 'Failed To Get Calendar Events';
+							e.subErr = err;
+							cb(e, null);
+						} else {
+							cb(null, res);
+						}
+					});
+				}
 			} else {
 				e.message = 'Failed To Find "Calendar" Item In Folders';
 				e.code = 0;
@@ -385,11 +394,12 @@ GWS.prototype.init = function (opts, cb) {
 	var self = this;
 	var e = new error.obj();
 
-	if (opts && opts.server) {
-		endpoint = 'http://' + opts.server + ':' + opts.port.toString() +  '/soap';
-	}
 	if (opts && opts.wsdl) {
 		url = opts.wsdl;
+	}
+
+	if (opts && opts.server) {
+		endpoint = 'http://' + opts.server + ':' + opts.port.toString() +  '/soap';
 	}
 
 	soap.createClient(url, function (err, c) {

@@ -73,7 +73,7 @@ function run() {
 }
 
 gws.on('response', function (res) {
-	console.error('Got A Response At ' + new Date());
+
 });
 
 gws.on('error', function (e) {
