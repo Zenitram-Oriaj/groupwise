@@ -44,14 +44,17 @@ GroupWise Methods:
  	});
  ```
  ---------------------
- - login(): Is used to authenticate to a POA. Trusted Application is currently not supported but will be coming soon.
- Note: Applications cannot log in to GroupWise resources. To access resources data, log in as the owner of the resource and then proxy into the resource.
+ - login(): Is used to authenticate to a POA. 
+ -> Note: Trusted Application is currently not supported but will be coming soon.
+ -> Note: Applications cannot log in to GroupWise resources. To access resources data, log in as the owner of the resource and then proxy into the resource.
  
  ```
- var args = {
- 		user: 'ao',
- 		pass: '!boi123'
- 	};
+	var args = {
+		user: 'ao',       // Required
+		pass: '!boi123',  // Required
+		lang: 'en',       // Optional (Default: en)
+		version: '1.05'   // Optional (Default: 1.05)
+	};
  
  	gws.login(args, function (err, res) {
  		if (err) {
@@ -68,8 +71,6 @@ GroupWise Methods:
  
  ```
  var args = {
- 		user: 'ao',
- 		pass: '!boi123',
  		proxy: 'Conference Room 1'
  	};
  
