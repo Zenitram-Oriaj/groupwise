@@ -38,6 +38,7 @@ var creds = {
 };
 
 var Filter = require('./filter');
+var Proxy = require('./proxy');
 
 var GWS = function () {
 	events.EventEmitter.call(this);
@@ -47,6 +48,44 @@ util.inherits(GWS, events.EventEmitter);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
+function _getDateTimeStr(dt){
+
+	if (dt instanceof Date) {
+	} else {
+		dt = new Date(dt);
+	}
+
+	var yy = dt.getFullYear();
+	var mm = dt.getMonth() + 1;
+	var dd = dt.getDate();
+
+	var hh = dt.getHours();
+	var nn = dt.getMinutes();
+
+	if (dd < 10) dd = '0' + dd;
+	if (mm < 10) mm = '0' + mm;
+	if (hh < 10) hh = '0' + hh;
+	if (nn < 10) nn = '0' + nn;
+
+	return yy + '-' + mm + '-' + dd + 'T' + hh + ':' + nn + ':00.000';
+}
+
+function _checkStatusCode(code){
+	return (code == 0);
+}
+
+function _clearUser(){
+	userinfo = {};
+}
+
+function _setSession(id){
+	client.clearSoapHeaders();
+
+	if(id){
+		client.addSoapHeader('<session xmlns="http://schemas.novell.com/2005/01/GroupWise/types">' + id + '</session>');
+	}
+}
 
 function _setFilter(opts){
 	var filter = new Filter();
@@ -107,34 +146,34 @@ function _checkSetParams(params, type) {
 	}
 }
 
-function _login(args, cb) {
-	var e = new error.obj();
-	client.loginRequest(args, function (err, res) {
-		if (err) {
-			e.message = 'Failed To Login';
-			e.subErr = err;
-			e.params = args;
-			cb(e, null);
-		} else {
-			if (res.status.code === 0) {
-				sessionId = res.session;
-				loggedIn = true;
-
-				client.clearSoapHeaders();
-				client.addSoapHeader('<session xmlns="http://schemas.novell.com/2005/01/GroupWise/types">' + sessionId + '</session>');
-
-				userinfo = res.userinfo;
-
-				cb(null, res);
-			} else {
-				e.message = 'Failed To Login To Server';
-				e.subErr = res;
-				e.code = res.status.code;
-				cb(e, null);
-			}
-
-		}
+function _getAppointments(items){
+	var events = [];
+	items.forEach(function(item){
+		console.log(item.attributes['xsi:type']);
+		if(item.attributes['xsi:type'] === 'gwt:Appointment') events.push(item);
 	});
+
+	return events;
+}
+
+function _login(args, cb) {
+	client.loginRequest(args, function (err, res) {
+		cb(err,res);
+	});
+}
+
+function _logout(cb){
+	var args = {};
+	client.logoutRequest(args, function (err, res) {
+		cb(err,res);
+	});
+}
+
+function _getProxyList(cb){
+	var args = {};
+	client.getProxyListRequest(args,function(err,res){
+		cb(err,res);
+	})
 }
 
 function _getAddressBookList(cb) {
@@ -161,6 +200,32 @@ function _getFolderList(cb) {
 		} else {
 			cb(null, res.folders.folder);
 		}
+	});
+}
+
+function _startFreeBusySession(args,cb){
+	client.startFreeBusySessionRequest(args,function(err,res){
+		cb(err,res);
+	});
+}
+
+function _getFreeBusySession(id,cb){
+	var args = {
+		freeBusySessionId: id
+	};
+
+	client.getFreeBusyRequest(args,function(err,res){
+		cb(err,res);
+	});
+}
+
+function _closeFreeBusySession(id,cb){
+	var args = {
+		freeBusySessionId: id
+	};
+
+	client.closeFreeBusySessionRequest(args,function(err,res){
+		cb(err,res);
 	});
 }
 
@@ -246,19 +311,78 @@ function _modifyItem(id, cb) {
 // Public Methods
 
 GWS.prototype.getDateTimeStr = function(dt) {
-	var yy = dt.getFullYear();
-	var mm = dt.getMonth() + 1;
-	var dd = dt.getDate();
+		return _getDateTimeStr(dt);
+};
 
-	var hh = dt.getHours();
-	var nn = dt.getMinutes();
+GWS.prototype.getUserFreeBusy = function(user,start,end,cb){
+	var e = new error.obj();
 
-	if (dd < 10) dd = '0' + dd;
-	if (mm < 10) mm = '0' + mm;
-	if (hh < 10) hh = '0' + hh;
-	if (nn < 10) nn = '0' + nn;
+	var dts = _getDateTimeStr(start);
+	var dtn = _getDateTimeStr(end);
 
-	return yy + '-' + mm + '-' + dd + 'T' + hh + ':' + nn + ':00.000';
+	if(user){
+		var args = {
+			users:[{
+					user: {
+						displayName: user
+					}
+				}
+			],
+			startDate: dts,
+			endDate: dtn
+		};
+
+		_startFreeBusySession(args,function(err,res){
+			if(err){
+				cb(err,null);
+			} else {
+				if(_checkStatusCode(res.status.code)){
+					var id = res.freeBusySessionId;
+					_getFreeBusySession(id,function(err,res){
+						if(err){
+							cb(err,null);
+						} else {
+							var result = res;
+							_closeFreeBusySession(id,function(err,res){
+								var items = [];
+								result.freeBusyInfo.user.forEach(function(item){
+									item.blocks.block.forEach(function(b){
+										items.push(b);
+									});
+								});
+								cb(err,items);
+							});
+						}
+					});
+				} else {
+					e.message = 'Error Occurred :: ' + res.status.description;
+					e.code = res.status.code;
+					e.subErr = res.status.problems.entry;
+					e.params = user;
+					cb(e,null);
+				}
+			}
+		});
+	} else {
+
+	}
+};
+
+GWS.prototype.getProxyList = function(cb){
+	var e = new error.obj();
+
+	if(loggedIn){
+		_getProxyList(function(err,res){
+			if(res.proxies){
+				cb(null,res.proxies.proxy)
+			} else {
+				cb(err,res);
+			}
+		});
+	} else {
+		e.message = 'Not Logged In';
+		cb(e,null);
+	}
 };
 
 GWS.prototype.getAddressBooks = function (cb) {
@@ -407,7 +531,8 @@ GWS.prototype.getCalendar = function (opts, cb) {
 							e.subErr = err;
 							cb(e, null);
 						} else {
-							cb(null, res);
+							var items = _getAppointments(res);
+							cb(null, items);
 						}
 					});
 				} else {
@@ -483,6 +608,11 @@ GWS.prototype.login = function (params, cb) {
 				self.emit('error', err);
 				cb(err, null)
 			} else {
+				loggedIn = true;
+				userinfo = res.userinfo;
+				sessionId = res.session;
+				_setSession(sessionId);
+
 				self.emit('response', res);
 				cb(null, res);
 			}
@@ -498,6 +628,7 @@ GWS.prototype.login = function (params, cb) {
 GWS.prototype.proxyLogin = function (params, cb) {
 	var self = this;
 	var e = new error.obj();
+	var proxy = new Proxy();
 
 	if (loggedIn && _checkSetParams(params, 2)) {
 		var args = {
@@ -517,11 +648,26 @@ GWS.prototype.proxyLogin = function (params, cb) {
 
 		_login(args, function (err, res) {
 			if (err) {
-				self.emit('error', err);
-				cb(err, null)
+				e.message = 'Failed To Login';
+				e.subErr = err;
+				e.params = args;
+				cb(e, null);
 			} else {
-				self.emit('response', res);
-				cb(null, res);
+				if (res.status.code === 0) {
+					proxy.uid = creds.proxy;
+					proxy.session = res.session;
+					proxy.userinfo = res.userinfo;
+					proxy.entry = res.entry;
+
+					_setSession(proxy.session);
+					cb(null, proxy);
+				} else {
+					e.message = 'Failed To Login To Server';
+					e.subErr = res;
+					e.code = res.status.code;
+					cb(e, null);
+				}
+
 			}
 		});
 	} else {
@@ -532,13 +678,26 @@ GWS.prototype.proxyLogin = function (params, cb) {
 	}
 };
 
+GWS.prototype.setSession = function (id,cb) {
+	var e = new error.obj();
+
+	if(id){
+		_setSession(id);
+		cb(null,{msg: 'ok'});
+	} else {
+		e.message = 'No ID specified';
+		cb(e,null);
+	}
+};
+
 GWS.prototype.logout = function (cb) {
 	var self = this;
 	var e = new error.obj();
 
 	if (loggedIn) {
-		var args = {};
-		client.logoutRequest(args, function (err, res) {
+		_setSession(sessionId);
+
+		_logout(function(err,res){
 			if (err) {
 				e.message = 'Failed To Logout';
 				e.subErr = err;
@@ -547,6 +706,8 @@ GWS.prototype.logout = function (cb) {
 			} else {
 				sessionId = '';
 				loggedIn = false;
+				_clearUser();
+
 				client.clearSoapHeaders();
 				self.emit('response', res);
 				cb(null, res);
@@ -557,7 +718,6 @@ GWS.prototype.logout = function (cb) {
 		self.emit('error', e);
 		cb(e, null);
 	}
-
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////

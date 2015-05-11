@@ -7,7 +7,9 @@
   },
   "author": "Jairo Martinez <jairo@digime.net>",
   "dependencies": {
-    "soap": "git://github.com/vpulim/node-soap.git"
+    "async": "^0.9.0",
+    "soap": "git://github.com/vpulim/node-soap.git",
+    "underscore": "^1.8.3"
   },
   "devDependencies": {
     "soap": "git://github.com/vpulim/node-soap.git"

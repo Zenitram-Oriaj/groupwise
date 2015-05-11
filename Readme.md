@@ -43,12 +43,11 @@ GroupWise Methods:
  		port:   '7191',                   // Required
  		wsdl:   '../wsdl/groupwise.wsdl'  // Optional (Location of the Groupwise WSDL file)
  	};
- 
  	gws.init(args, function (err, res) {
  		if (err) {
- 			console.error(err);
+ 			...
  		} else {
- 			console.info(res);
+ 			...
  		}
  	});
  ```
@@ -64,12 +63,11 @@ GroupWise Methods:
 		lang: 'en',       // Optional (Default: en)
 		version: '1.05'   // Optional (Default: 1.05)
 	};
- 
  	gws.login(args, function (err, res) {
  		if (err) {
- 			console.error(err);
+ 			...
  		} else {
- 			console.info(res);
+ 			...
  		}
  	});
  ```
@@ -82,24 +80,36 @@ GroupWise Methods:
  var args = {
  		proxy: 'Conference Room 1'
  	};
- 
  	gws.proxyLogin(args, function (err, res) {
  		if (err) {
- 			console.error(err);
+ 			...
  		} else {
- 			console.info(res);
+ 			...
  		}
  	});
  ```
+---------------------
+  - setSession(): Sets the specific session you want to use.  
+  The id is the unique key generated and stored in the return object from the proxyLogin method;
+   
+  ```
+  var id = 's#df%#FR';
+   gws.setSession(id,function(err,res){
+     if(err){
+       ...
+   	} else {
+   		...
+   	}
+   })
+  ```
  ---------------------
- - logout()
- 
+ - logout(): Will logout of the primary user's session.
  ```
  gws.logout(function (err, res) {
   		if (err) {
-  			console.error(err);
+  			...
   		} else {
-  			console.info(res);
+  			...
   		}
   	});
  ```
@@ -116,9 +126,9 @@ GroupWise Methods:
  ```
   gws.getFolders(function (err, res) {
      if(err) {
-       //...
+       ...
      } else {
-       //...
+       ...
      }
    });
  ```
@@ -128,20 +138,48 @@ GroupWise Methods:
   ```
    gws.getResources(function (err, res) {
       if(err) {
-        //...
+        ...
       } else {
-        //...
+        ...
       }
     });
+  ```
+---------------------
+ - getProxyList(): Will return an array of user objects that the current logged in user can proxy into.
+  
+  ```
+   gws.getProxyList(function (err, res) {
+      if(err) {
+        ...
+      } else {
+        ...
+      }
+    });
+  ```
+---------------------
+ - getUserFreeBusy(): Returns a specified user's calendar events in between a start and end time frame.  
+  *Here I want to get events between now and 3 days from now*
+  ```
+  var user = 'Conference Room 3'; // Use the "displayName" of the user
+  var start = new Date();
+  var end = new Date();
+  end.setDate(end.getDate() + 3);
+  gws.getUserFreeBusy(user,start,end,function(err,res){
+  	if(err){
+  		...
+  	} else {
+  		...
+  	}
+  });
   ```
 ---------------------
  - getCalendar(): Returns calendar events for the main calendar
  ```
   gws.getCalendar(function (err, res) {
   	if (err) {
-  		console.error(err);
+  		...
   	} else {
-  		console.info(res);
+  		...
   	}
   });
  ```
@@ -156,24 +194,23 @@ GroupWise Methods:
 	  field: 'startDate',
 	  value: dts
 	};
-	 
 	gws.getCalendar(opts, function (err, res) {
 		if (err) {
-	    console.error(err);
+	    ...
 	  } else {
-	    console.info(res);
+	    ...
 	  }
 	});
  ```
  
 ---------------------
- - getGlobalAddressBook()
+ - getGlobalAddressBook(): Returns the users accessable global address book.
 ```
   gws.getGlobalAddressBook(function (err, res) {
     if(err) {
-      //...
+      ...
     } else {
-      //...
+      ...
     }
   });
 ```
