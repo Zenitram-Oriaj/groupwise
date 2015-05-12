@@ -3,8 +3,11 @@
  */
 
 var async = require('async');
+
+
 var GWS = require('../libs/gws');
 var gws = new GWS();
+
 var proxies = [];
 var resources = [];
 var proxyList = [];
@@ -86,14 +89,12 @@ function CollectProxiesByList() {
 			if(err){
 				console.error(err);
 			} else {
-				console.info(results);
 				proxies = results;
 				gws.setSession(proxies[1].session,function(err,res){
 					if(err){
-
+						console.error(err);
 					} else {
-						console.info(res);
-						collect();
+						CreateAppointment();
 					}
 				});
 			}
@@ -106,7 +107,6 @@ function CollectResources(){
 		if (err) {
 			console.error(err);
 		} else {
-			//console.info(res);
 			resources = res;
 		}
 	});
@@ -128,6 +128,94 @@ function ProxyLogin(id, cb) {
 	});
 }
 
+function GetFreeBusy() {
+	var start = new Date();
+	var dt = new Date();
+	dt.setDate(dt.getDate() + 3);
+	var end = gws.getDateTimeStr(dt);
+
+	gws.getUserFreeBusy('Conference Room 3',start,end,function(err,res){
+		if(err){
+			console.error(err);
+		} else {
+			console.info(res);
+		}
+	});
+}
+
+function GetProxyList(){
+	gws.getProxyList(function(err,res) {
+		if (err) {
+			console.error(err);
+		} else {
+			proxyList = res;
+			CollectProxiesByList();
+		}
+	});
+}
+
+function Logout(){
+	gws.logout(function(err,res){
+
+	});
+}
+
+function CreateAppointment(){
+	var start = new Date();
+	var end = new Date();
+
+	var min = start.getMinutes();
+	var val = 0;
+
+	if(min < 15) val = 0;
+	else if (min < 30) val = 15;
+	else if (min < 45) val = 30;
+	else val = 45;
+
+	start.setMinutes(val);
+
+	end.setHours(start.getHours() + 3);
+	end.setMinutes(val);
+
+	var params = {
+		subject: 'A SOAP Created Meeting',
+		message: 'This is a test meeting created by SOAP Client',
+		start: start,
+		end: end,
+		allDay: false,
+		place: 'Conference Room 1'
+	};
+
+	gws.createAppointment(params,function(err,res){
+		if(err){
+			console.error(err);
+		} else {
+			console.info(res.id[0]);
+			RemoveAppointment(res.id[0]);
+		}
+	});
+}
+
+function RemoveAppointment(id){
+	gws.removeAppointment(id,function(err,res){
+		if(err){
+			console.error(err);
+		} else {
+			console.info(res);
+		}
+	});
+}
+
+function GetCalendar(){
+	gws.getCalendar(function(err,res){
+		if(err){
+			console.error(err);
+		} else {
+			Logout();
+		}
+	});
+}
+
 function run() {
 	gws.init(host, function (err, res) {
 		if (err) {
@@ -137,29 +225,7 @@ function run() {
 				if (err) {
 					console.error(err);
 				} else {
-
-					var start = new Date();
-					var dt = new Date();
-					dt.setDate(dt.getDate() + 3);
-					var end = gws.getDateTimeStr(dt);
-
-					gws.getUserFreeBusy('Conference Room 3',start,end,function(err,res){
-						if(err){
-							console.error(err);
-						} else {
-							console.info(res);
-						}
-					});
-
-					/*
-					gws.getProxyList(function(err,res){
-						if(err){
-							console.error(err);
-						}	else {
-							proxyList = res;
-							CollectProxiesByList();
-						}
-					});*/
+					GetProxyList();
 				}
 			});
 		}

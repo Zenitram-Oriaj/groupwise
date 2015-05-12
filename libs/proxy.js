@@ -4,8 +4,9 @@
 var Proxy = function () {
 	this.session = '';
 	this.uid = '';
+	this.folders = [];
 
-	this.userinfo = {
+	this.info = {
 		name: '',
 		email: '',
 		uuid: '',

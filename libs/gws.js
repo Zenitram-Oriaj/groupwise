@@ -7,6 +7,8 @@
  */
 var soap = require('soap');
 var path = require('path');
+var _ = require('underscore');
+
 var events = require('events');
 var util = require('util');
 
@@ -16,29 +18,12 @@ var error = require('./error');
 var url = path.join(__dirname, '../wsdl/groupwise.wsdl');
 var endpoint = 'http://localhost:7191/soap';
 var client = {};
-var sessionId = '';
-var loggedIn = false;
-
-var userinfo = {
-	name:       '',
-	email:      '',
-	uuid:       '',
-	userid:     '',
-	domain:     '',
-	postOffice: '',
-	fid:        ''
-};
-
-var creds = {
-	user:    '',
-	pass:    '',
-	proxy:   '',
-	lang:    'en',
-	version: '1.05'
-};
 
 var Filter = require('./filter');
 var Proxy = require('./proxy');
+var User = require('./user');
+
+var user = new User();
 
 var GWS = function () {
 	events.EventEmitter.call(this);
@@ -48,6 +33,26 @@ util.inherits(GWS, events.EventEmitter);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
+function _afterLogin(obj,cb){
+	_getFolderList(function(err,res){
+		if(err){
+			cb(err,obj);
+		} else {
+			obj.folders = _parseResponse(res);
+			cb(null,obj);
+		}
+	});
+}
+
+function _parseResponse(res){
+	if(res.folders) return res.folders.folder;
+	if(res.items) return res.items.item;
+	if(res.timezones) return res.timezones.timezone;
+	if(res.books) return  res.books.book;
+
+	else return res;
+}
 
 function _getDateTimeStr(dt){
 
@@ -68,15 +73,72 @@ function _getDateTimeStr(dt){
 	if (hh < 10) hh = '0' + hh;
 	if (nn < 10) nn = '0' + nn;
 
-	return yy + '-' + mm + '-' + dd + 'T' + hh + ':' + nn + ':00.000';
+	return yy + '-' + mm + '-' + dd + 'T' + hh + ':' + nn + ':00.000Z';
 }
 
-function _checkStatusCode(code){
+function _createItem(args, cb){
+	args = args || {};
+	client.createItemRequest(args, function(err,res){
+		cb(err,res);
+	});
+}
+
+function _getSettings(args, cb){
+	args = args || {};
+	client.getSettingsRequest(args, function(err,res){
+		cb(err,res);
+	});
+}
+
+function _checkStatusCode(res){
+	var code = res.status.code;
 	return (code == 0);
 }
 
+function _parseStatus(res){
+	var e = new error.obj();
+
+	console.error(res);
+	return e;
+}
+
+function _getContainer(folders, type){
+	var id = '';
+	folders.forEach(function(folder){
+		if(folder.name === type){
+			id = folder.id;
+		}
+	});
+
+	return id;
+}
+
 function _clearUser(){
-	userinfo = {};
+	user = new User();
+}
+
+function _getProxy(session){
+	var obj = {};
+	if(user.proxies.length > 0){
+		obj = _.findWhere(user.proxies,{session: session});
+	}
+	return obj;
+}
+
+function _getSession(){
+	var headers = client.getSoapHeaders();
+
+	var str = headers[0];
+	var a = str.indexOf('>');
+
+	if(a > -1){
+		str = str.slice((a + 1),str.length);
+		a = str.indexOf('<');
+		if(a > -1){
+			str = str.slice(0,a);
+		}
+	}
+	return str;
 }
 
 function _setSession(id){
@@ -113,28 +175,28 @@ function _checkSetParams(params, type) {
 	if (params) {
 
 		// Optional Params
-		if (params.lang) creds.lang = params.lang;
+		if (params.lang) user.creds.lang = params.lang;
 		if (params.version
 			&& params.version == '1.05'
 			|| params.version == '1.04'
 			|| params.version == '1.03'
 			|| params.version == '1.02'
-		) creds.version = params.version;
+		) user.creds.version = params.version;
 
 		// Required Params
 
 		switch (type) {
 			case 1:{
-				if (params.user) creds.user = params.user;
+				if (params.user) user.creds.user = params.user;
 				else return false;
 
-				if (params.pass) creds.pass = params.pass;
+				if (params.pass) user.creds.pass = params.pass;
 				else return false;
 
 				return true;
 			}
 			case 2:{
-				if (params.proxy) creds.proxy = params.proxy + '.' + userinfo.postOffice + '.' + userinfo.domain;
+				if (params.proxy) user.creds.proxy = params.proxy + '.' + user.info.postOffice + '.' + user.info.domain;
 				else return false;
 
 				return true;
@@ -149,7 +211,6 @@ function _checkSetParams(params, type) {
 function _getAppointments(items){
 	var events = [];
 	items.forEach(function(item){
-		console.log(item.attributes['xsi:type']);
 		if(item.attributes['xsi:type'] === 'gwt:Appointment') events.push(item);
 	});
 
@@ -179,11 +240,7 @@ function _getProxyList(cb){
 function _getAddressBookList(cb) {
 	var args = {};
 	client.getAddressBookListRequest(args, function (err, res) {
-		if (err) {
-			cb(err, null);
-		} else {
-			cb(null, res.books.book);
-		}
+		cb(err, res);
 	});
 }
 
@@ -195,10 +252,17 @@ function _getFolderList(cb) {
 		nntp:    false
 	};
 	client.getFolderListRequest(args, function (err, res) {
+		cb(err, res);
+	});
+}
+
+function _getRuleList(cb) {
+	var args = {};
+	client.getRuleListRequest(args, function (err, res) {
 		if (err) {
 			cb(err, null);
 		} else {
-			cb(null, res.folders.folder);
+			cb(null, res.rules.rule);
 		}
 	});
 }
@@ -232,22 +296,7 @@ function _closeFreeBusySession(id,cb){
 function _getTimezoneList(cb) {
 	var args = {};
 	client.getTimezoneListRequest(args, function (err, res) {
-		if (err) {
-			cb(err, null);
-		} else {
-			cb(null, res.folders.folder);
-		}
-	})
-}
-
-function _getSettings(cb) {
-	var args = {};
-	client._getSettingsRequest(args, function (err, res) {
-		if (err) {
-			cb(err, null);
-		} else {
-			cb(null, res);
-		}
+		cb(err,res);
 	})
 }
 
@@ -257,11 +306,7 @@ function _getItem(id, cb) {
 		view: 'default peek'
 	};
 	client.getItemRequest(args, function (err, res) {
-		if (err) {
-			cb(err, null);
-		} else {
-			cb(null, res);
-		}
+		cb(err,res);
 	});
 }
 
@@ -271,60 +316,155 @@ function _getItems(id,filter, cb) {
 		filter: filter
 	};
 	client.getItemsRequest(args, function (err, res) {
-		if (err) {
-			cb(err, null);
-		} else {
-			if(res.items){
-				cb(null, res.items.item);
-			} else {
-				cb(null, res);
-			}
-
-		}
+		cb(err, res);
 	});
 }
 
-function _modifyItem(id, cb) {
-	/*
-	 <modifyItemRequest>
-	 <id type="types:uid"/>
-	 <notification type="types:SharedFolderNotification"/> <updates type="types:ItemChanges"/> <recurrenceAllInstances type="unsignedInt"/>
-	 </modifyItemRequest>
-	 */
-
-	var args = {
-		id:      id,
-		updates: {
-			update: {}
-		}
-	};
+function _modifyItem(args, cb) {
+	args = args || {};
 
 	client.modifyItemRequest(args, function (err, res) {
-		if (err) {
-			cb(err, null);
-		} else {
-			cb(null, res);
-		}
+		cb(err,res);
+	})
+}
+
+function _removeItem(args,cb){
+	args = args || {};
+
+	client.removeItemRequest(args, function (err, res) {
+		cb(err,res);
+	})
+}
+
+function _sendItem(args,cb){
+	args = args || {};
+	client.sendItemRequest(args,function(err,res){
+		cb(err,res);
 	})
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public Methods
 
-GWS.prototype.getDateTimeStr = function(dt) {
-		return _getDateTimeStr(dt);
+GWS.prototype.removeAppointment = function(id,cb){
+	var e = new error.obj();
+	var obj = {};
+	var ses = _getSession();
+
+	if (ses == user.session){
+		obj = user;
+	} else {
+		obj = _getProxy(ses);
+	}
+
+	var args = {
+		container: _getContainer(obj.folders,'Calendar'),
+		id: id
+	};
+
+	_removeItem(args,function(err,res){
+		if(err){
+			cb(err,null);
+		} else {
+			if(_checkStatusCode(res)){
+				cb(null,res);
+			} else {
+				e = _parseStatus(res);
+				cb(e,null);
+			}
+		}
+	});
 };
 
-GWS.prototype.getUserFreeBusy = function(user,start,end,cb){
+GWS.prototype.updateAppointment = function(params,cb){
+	var e = new error.obj();
+	var obj = {};
+	var ses = _getSession();
+
+	if (ses == user.session){
+		obj = user;
+	} else {
+		obj = _getProxy(ses);
+	}
+
+	var args = {
+		container: _getContainer(obj.folders,'Calendar'),
+		id: params.id,
+		updates: params.updates
+	};
+
+	_modifyItem(args,function(err,res){
+		if(err){
+			e.message = '';
+			e.code = -1;
+			e.subErr = err;
+			e.params = params;
+			cb(e,null);
+		} else {
+			if(_checkStatusCode(res)){
+				cb(null,res);
+			} else {
+				e = _parseStatus(res);
+				cb(e,null);
+			}
+		}
+	});
+};
+
+GWS.prototype.createAppointment = function(params,cb){
+	var e = new error.obj();
+	var obj = {};
+	var ses = _getSession();
+
+	if (ses == user.session){
+		obj = user;
+	} else {
+		obj = _getProxy(ses);
+	}
+
+	var args = {
+		item: {
+			attributes:{
+				type: 'Appointment'
+			},
+			class: 'Public',
+			container: _getContainer(obj.folders,'Calendar'),
+			acceptLevel: 'Busy',
+			startDate: params.start.toISOString(),
+			endDate: params.end.toISOString(),
+			subject: params.subject || '',
+			message: params.message || '',
+			allDayEvent: params.allDay || false,
+			place: params.place || user.info.name
+		}
+	};
+	_createItem(args,function(err,res){
+		if(err){
+			e.message = 'Fail To Create Appointment';
+			e.subErr = err;
+			cb(e,res);
+		} else {
+			if(_checkStatusCode(res)){
+				res = _parseResponse(res);
+				cb(null,res);
+			} else {
+				e = _parseStatus(res);
+				cb(e,null);
+			}
+		}
+	});
+};
+
+GWS.prototype.getUserFreeBusy = function(str,start,end,cb){
 	var e = new error.obj();
 
 	var dts = _getDateTimeStr(start);
 	var dtn = _getDateTimeStr(end);
 
-	if(user){
+	if(str){
 		var args = {
 			users:[{
 					user: {
-						displayName: user
+						displayName: str
 					}
 				}
 			],
@@ -371,7 +511,7 @@ GWS.prototype.getUserFreeBusy = function(user,start,end,cb){
 GWS.prototype.getProxyList = function(cb){
 	var e = new error.obj();
 
-	if(loggedIn){
+	if(user.loggedIn){
 		_getProxyList(function(err,res){
 			if(res.proxies){
 				cb(null,res.proxies.proxy)
@@ -391,10 +531,18 @@ GWS.prototype.getAddressBooks = function (cb) {
 	_getAddressBookList(function (err, res) {
 		if (err) {
 			e.message = 'Failed To Get Address Book List';
+			e.code = -1;
 			e.subErr = err;
 			cb(e, null);
 		} else {
-			cb(null, res);
+			if(_checkStatusCode(res)){
+				res = _parseResponse(res);
+				cb(null, res);
+			} else {
+
+			}
+
+
 		}
 	});
 };
@@ -460,33 +608,38 @@ GWS.prototype.getResources = function(cb){
 			e.subErr = err;
 			cb(e, null);
 		} else {
-			var id = '';
-			res.forEach(function (item) {
-				if (item.name === 'GroupWise Address Book') {
-					id = item.id;
-				}
-			});
-			if (id.length > 0) {
-				cursor.retrieve(client, id, function (err, res) {
-					if (err) {
-						e.message = 'Failed To Get Global Address Book';
-						e.subErr = err;
-						cb(e, null);
-					} else {
-						var resources = [];
-						res.forEach(function(u){
-							if(u.attributes['xsi:type'] == 'gwt:Resource'){
-								resources.push(u);
-							}
-						});
+			if(_checkStatusCode(res)){
+				var id = '';
+				res = _parseResponse(res);
 
-						cb(null,resources);
+				res.forEach(function (item) {
+					if (item.name === 'GroupWise Address Book') {
+						id = item.id;
 					}
 				});
-			} else {
-				e.message = 'Failed To Find Global Address Book In Address List';
-				cb(e, null);
+				if (id.length > 0) {
+					cursor.retrieve(client, id, function (err, res) {
+						if (err) {
+							e.message = 'Failed To Get Global Address Book';
+							e.subErr = err;
+							cb(e, null);
+						} else {
+							var resources = [];
+							res.forEach(function(u){
+								if(u.attributes['xsi:type'] == 'gwt:Resource'){
+									resources.push(u);
+								}
+							});
+
+							cb(null,resources);
+						}
+					});
+				} else {
+					e.message = 'Failed To Find Global Address Book In Address List';
+					cb(e, null);
+				}
 			}
+
 		}
 	});
 };
@@ -500,7 +653,13 @@ GWS.prototype.getFolders = function (cb) {
 			e.subErr = err;
 			cb(e, null);
 		} else {
-			cb(null, res);
+			if(_checkStatusCode(res)){
+				res = _parseResponse(res);
+				cb(null, res);
+			} else {
+				e = _parseStatus(res);
+				cb(e,res);
+			}
 		}
 	});
 };
@@ -520,6 +679,7 @@ GWS.prototype.getCalendar = function (opts, cb) {
 			e.subErr = err;
 			cb(e, null);
 		} else {
+			res = _parseResponse(res);
 			var id = _getId(res,'Calendar');
 			if (id.length > 0) {
 				if(opts) {
@@ -595,11 +755,11 @@ GWS.prototype.login = function (params, cb) {
 						type:  'PlainText'
 					}
 				},
-				username:   creds.user,
-				password:   creds.pass
+				username:   user.creds.user,
+				password:   user.creds.pass
 			},
-			language: creds.lang,
-			version:  creds.version,
+			language: user.creds.lang,
+			version:  user.creds.version,
 			userid:   true
 		};
 
@@ -608,13 +768,20 @@ GWS.prototype.login = function (params, cb) {
 				self.emit('error', err);
 				cb(err, null)
 			} else {
-				loggedIn = true;
-				userinfo = res.userinfo;
-				sessionId = res.session;
-				_setSession(sessionId);
-
-				self.emit('response', res);
-				cb(null, res);
+				if(_checkStatusCode(res)){
+					user.loggedIn = true;
+					user.info = res.userinfo;
+					user.session = res.session;
+					var dat = res;
+					_setSession(user.session);
+					_afterLogin(user, function(err,res){
+						self.emit('response', dat);
+						cb(err, dat);
+					});
+				} else {
+					e = _parseStatus(res);
+					cb(e,null);
+				}
 			}
 		});
 	} else {
@@ -630,7 +797,7 @@ GWS.prototype.proxyLogin = function (params, cb) {
 	var e = new error.obj();
 	var proxy = new Proxy();
 
-	if (loggedIn && _checkSetParams(params, 2)) {
+	if (user.loggedIn && _checkSetParams(params, 2)) {
 		var args = {
 			auth:   {
 				attributes: {
@@ -639,9 +806,9 @@ GWS.prototype.proxyLogin = function (params, cb) {
 						type:  'Proxy'
 					}
 				},
-				username:   creds.user,
-				password:   creds.pass,
-				proxy:      creds.proxy
+				username:   user.creds.user,
+				password:   user.creds.pass,
+				proxy:      user.creds.proxy
 			},
 			userid: true
 		};
@@ -653,21 +820,22 @@ GWS.prototype.proxyLogin = function (params, cb) {
 				e.params = args;
 				cb(e, null);
 			} else {
-				if (res.status.code === 0) {
-					proxy.uid = creds.proxy;
+				if (_checkStatusCode(res)) {
+					proxy.uid = user.creds.proxy;
 					proxy.session = res.session;
-					proxy.userinfo = res.userinfo;
+					proxy.info = res.userinfo;
 					proxy.entry = res.entry;
 
-					_setSession(proxy.session);
-					cb(null, proxy);
+					_afterLogin(proxy, function(err,res){
+						user.proxies.push((proxy));
+						cb(err, proxy);
+					});
+
 				} else {
-					e.message = 'Failed To Login To Server';
-					e.subErr = res;
-					e.code = res.status.code;
+					e = _parseStatus(res);
+					e.args = params;
 					cb(e, null);
 				}
-
 			}
 		});
 	} else {
@@ -694,9 +862,8 @@ GWS.prototype.logout = function (cb) {
 	var self = this;
 	var e = new error.obj();
 
-	if (loggedIn) {
-		_setSession(sessionId);
-
+	if (user.loggedIn) {
+		_setSession(user.session);
 		_logout(function(err,res){
 			if (err) {
 				e.message = 'Failed To Logout';
@@ -704,12 +871,8 @@ GWS.prototype.logout = function (cb) {
 				self.emit('error', e);
 				cb(e, null);
 			} else {
-				sessionId = '';
-				loggedIn = false;
 				_clearUser();
-
 				client.clearSoapHeaders();
-				self.emit('response', res);
 				cb(null, res);
 			}
 		});

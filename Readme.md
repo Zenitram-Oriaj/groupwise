@@ -8,7 +8,7 @@ NOTE: This is my very first public module, so it may have lots of issues and not
 Expect changes to how it operates to occur.
 
 Additional Documentation:
-=========================
+-------------------------
 Novell GroupWise SOAP Service Documentation available at:
 [Novell Developer] (https://www.novell.com/developer/ndk/groupwise/groupwise_web_service_%28soap%29.html)
 
@@ -36,94 +36,86 @@ var gws = new GWS();
 GroupWise Methods:
 ======================
  
- - init(): Execute this method first before anything else:
- ```
- var args = {
- 		server: '172.16.76.2',            // Required
- 		port:   '7191',                   // Required
- 		wsdl:   '../wsdl/groupwise.wsdl'  // Optional (Location of the Groupwise WSDL file)
- 	};
- 	gws.init(args, function (err, res) {
- 		if (err) {
- 			...
- 		} else {
- 			...
- 		}
- 	});
- ```
- ---------------------
- - login(): Is used to authenticate to a POA.  
-  Note: Trusted Application is currently not supported but will be coming soon.
-  Note: Applications cannot log in to GroupWise resources. To access resources data, log in as the owner of the resource and then proxy into the resource.
- 
- ```
-	var args = {
-		user: 'ao',       // Required
-		pass: '!boi123',  // Required
-		lang: 'en',       // Optional (Default: en)
-		version: '1.05'   // Optional (Default: 1.05)
+- init(): Execute this method first before anything else:
+```
+var args = {
+		server: '172.16.76.2',            // Required
+		port:   '7191',                   // Required
+		wsdl:   '../wsdl/groupwise.wsdl'  // Optional (Location of the Groupwise WSDL file)
 	};
- 	gws.login(args, function (err, res) {
- 		if (err) {
- 			...
- 		} else {
- 			...
- 		}
- 	});
- ```
- ---------------------
- - proxyLogin(): To login as an authorized proxy of another user's account. 
-                 You must first login is as the primary user before running the proxy login.
-                 Note: The domain and po will be automatically added to the proxy user.
- 
- ```
- var args = {
- 		proxy: 'Conference Room 1'
- 	};
- 	gws.proxyLogin(args, function (err, res) {
- 		if (err) {
- 			...
- 		} else {
- 			...
- 		}
- 	});
+	gws.init(args, function (err, res) {
+		if (err) {
+			...
+		} else {
+			...
+		}
+	});
+```
+---------------------
+- login(): Is used to authenticate to a POA.  
+ Note: Trusted Application is currently not supported but will be coming soon.
+ Note: Applications cannot log in to GroupWise resources. To access resources data, log in as the owner of the resource and then proxy into the resource.
+
+```	
+  var args = {		
+    user: 'ao',       // Required	
+    pass: '!boi123',  // Required		
+    lang: 'en',       // Optional (Default: en)		
+    version: '1.05'   // Optional (Default: 1.05)	
+  };
+	gws.login(args, function (err, res) {
+		if (err) {
+			...
+		} else {
+			...
+		}
+	});
+```
+---------------------
+- proxyLogin(): To login as an authorized proxy of another user's account. 
+                You must first login is as the primary user before running the proxy login.
+                Note: The domain and po will be automatically added to the proxy user.
+
+```
+  var args = {
+		proxy: 'Conference Room 1'
+	};
+	gws.proxyLogin(args, function (err, res) {
+		if (err) {
+			...
+		} else {
+			...
+		}
+	});
  ```
 ---------------------
-  - setSession(): Sets the specific session you want to use.  
+  - setSession(): Sets the specific session you want to use.  By default, the primary account session id is used.
   The id is the unique key generated and stored in the return object from the proxyLogin method;
    
   ```
   var id = 's#df%#FR';
-   gws.setSession(id,function(err,res){
-     if(err){
-       ...
+  gws.setSession(id,function(err,res){
+    if(err){
+      ...
    	} else {
    		...
    	}
-   })
+  });
   ```
  ---------------------
- - logout(): Will logout of the primary user's session.
- ```
- gws.logout(function (err, res) {
+ - logout(): Will logout of the primary user's session. This will remove any and all proxy sessions
+  ```
+  gws.logout(function (err, res) {
   		if (err) {
   			...
   		} else {
   			...
   		}
   	});
- ```
+  ```
 ---------------------
- - getDateTimeStr(): Formats the Date Time Object into a specific string.
-	```
-    // Date of example was May 8th, 2015 at 11:34 PDT
-    var dts = gws.getDateTimeStr(new Date()); 
-    // dts = 2015-05-08T11:34:00.000
-	```
----------------------
- - getFolders()
- 
- ```
+ - getFolders(): Gets a list of folders.
+  ```
   gws.getFolders(function (err, res) {
      if(err) {
        ...
@@ -131,30 +123,28 @@ GroupWise Methods:
        ...
      }
    });
- ```
+  ```
 ---------------------
  - getResources(): Will return any item from the global address book that is marked as a resource.
-  
-  ```
+   ```
    gws.getResources(function (err, res) {
-      if(err) {
-        ...
-      } else {
-        ...
-      }
-    });
-  ```
+     if(err) {
+       ...
+     } else {
+       ...
+     }
+   });
+   ```
 ---------------------
  - getProxyList(): Will return an array of user objects that the current logged in user can proxy into.
-  
   ```
-   gws.getProxyList(function (err, res) {
-      if(err) {
-        ...
-      } else {
-        ...
-      }
-    });
+  gws.getProxyList(function (err, res) {
+    if(err) {
+      ...
+    } else {
+       ...
+    }
+  });
   ```
 ---------------------
  - getUserFreeBusy(): Returns a specified user's calendar events in between a start and end time frame.  
@@ -202,7 +192,37 @@ GroupWise Methods:
 	  }
 	});
  ```
- 
+---------------------
+ - createAppointment(): Creates a new appointment and returns that appointments id.
+ ```
+ var params = {
+ 		subject: <string>,
+ 		message: <string>,
+ 		start: <date>,
+ 		end: <date>,
+ 		allDay: <bool>,
+ 		place: <string>'
+ 	};
+ 	gws.createAppointment(params,function(err,res){
+ 		if(err){
+ 			...
+ 		} else {
+ 			...
+ 		}
+ 	});
+ ```
+---------------------
+ - removeAppointment(): Removes an appointment from the calendar.
+ ```
+ var id = <string>
+ 	gws.removeAppointment(id,function(err,res){
+ 		if(err){
+ 			...
+ 		} else {
+ 			...
+ 		}
+ 	});
+ ```
 ---------------------
  - getGlobalAddressBook(): Returns the users accessable global address book.
 ```
