@@ -37,7 +37,7 @@ var gws = new GWS();
 GroupWise Methods:
 ======================
  
-- init()
+init()
 -------------------------
 Execute this method first before anything else:
 ```
@@ -56,7 +56,7 @@ var args = {
 ```
 -------------------------
 
-- login()
+login()
 -------------------------
 Is used to authenticate to a POA.  
  Note: Trusted Application is currently not supported but will be coming soon.
@@ -79,7 +79,7 @@ Is used to authenticate to a POA.
 ```
 -------------------------
 
-- proxyLogin()
+proxyLogin()
 -------------------------
  To login as an authorized proxy of another user's account. 
                 You must first login is as the primary user before running the proxy login.
@@ -99,7 +99,7 @@ Is used to authenticate to a POA.
 ```
 ---------------------
 
-- setSession()
+setSession()
 -------------------------
   Sets the specific session you want to use.  By default, the primary account session id is used.
   The id is the unique key generated and stored in the return object from the proxyLogin method;
@@ -116,7 +116,7 @@ Is used to authenticate to a POA.
 ```
 ---------------------
 
-- logout()
+logout()
 -------------------------
   Will logout of the primary user's session. This will remove any and all proxy sessions
 ```
@@ -130,7 +130,7 @@ Is used to authenticate to a POA.
 ```
 ---------------------
 
-- getFolders()
+getFolders()
 -------------------------
  Gets a list of folders.
 ```
@@ -144,7 +144,7 @@ Is used to authenticate to a POA.
 ```
 ---------------------
 
-- getResources()
+getResources()
 -------------------------
  Will return any item from the global address book that is marked as a resource.
 ```
@@ -158,7 +158,7 @@ Is used to authenticate to a POA.
 ```
 ---------------------
 
-- getProxyList()
+getProxyList()
 -------------------------
  Will return an array of user objects that the current logged in user can proxy into.
 ```
@@ -172,7 +172,7 @@ Is used to authenticate to a POA.
 ```
 ---------------------
 
-- getUserFreeBusy()
+getUserFreeBusy()
 -------------------------
  Returns a specified user's calendar events in between a start and end time frame.  
   *Here I want to get events between now and 3 days from now*
@@ -195,7 +195,7 @@ Is used to authenticate to a POA.
 ```
 ---------------------
  
-- getCalendar()
+getCalendar()
 -------------------------
  Returns calendar events for the main calendar
 ```
@@ -228,7 +228,7 @@ Is used to authenticate to a POA.
 ```
 ---------------------
 
-- createAppointment()
+createAppointment()
 -------------------------
  Creates a new appointment and returns that appointments id.
 ```
@@ -250,7 +250,7 @@ Is used to authenticate to a POA.
 ```
 ---------------------
 
-- updateAppointment()
+updateAppointment()
 -------------------------
  Updates an existing appointment.
 ```
@@ -276,7 +276,7 @@ Is used to authenticate to a POA.
 ```
 ---------------------
 
-- removeAppointment()
+removeAppointment()
 -------------------------
  Removes an appointment from the calendar.
 ```
@@ -291,7 +291,7 @@ Is used to authenticate to a POA.
 ```
 ---------------------
 
-- getGlobalAddressBook()
+getGlobalAddressBook()
 -------------------------
   Returns the users accessible global address book.
 ```
@@ -305,7 +305,7 @@ Is used to authenticate to a POA.
 ```
 ---------------------
 
-- getSettings()
+getSettings()
 -------------------------
  Returns the users settings.
 ```
@@ -330,7 +330,10 @@ On method callbacks, if there is an error, the error object this contain these p
  - subErr: If the error was produced by a dependency module, its error will be placed into here
  - params: Contains the parameters that was passed into the method.
  
+
 -------------------------
+-------------------------
+
 
 GroupWise Events:
 ======================
