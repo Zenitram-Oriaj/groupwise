@@ -7,6 +7,8 @@
  */
 var soap = require('soap');
 var path = require('path');
+
+var async = require('async');
 var _ = require('underscore');
 
 var events = require('events');
@@ -15,15 +17,16 @@ var util = require('util');
 var cursor = require('./cursor');
 var error = require('./error');
 
+var client = {};
 var url = path.join(__dirname, '../wsdl/groupwise.wsdl');
 var endpoint = 'http://localhost:7191/soap';
-var client = {};
 
 var Filter = require('./filter');
 var Proxy = require('./proxy');
 var User = require('./user');
 
 var user = new User();
+var debug = false;
 
 var GWS = function () {
 	events.EventEmitter.call(this);
@@ -43,132 +46,6 @@ function _afterLogin(obj,cb){
 			cb(null,obj);
 		}
 	});
-}
-
-function _parseResponse(res){
-	if(res.folders) return res.folders.folder;
-	if(res.items) return res.items.item;
-	if(res.timezones) return res.timezones.timezone;
-	if(res.books) return  res.books.book;
-
-	else return res;
-}
-
-function _getDateTimeStr(dt){
-
-	if (dt instanceof Date) {
-	} else {
-		dt = new Date(dt);
-	}
-
-	var yy = dt.getFullYear();
-	var mm = dt.getMonth() + 1;
-	var dd = dt.getDate();
-
-	var hh = dt.getHours();
-	var nn = dt.getMinutes();
-
-	if (dd < 10) dd = '0' + dd;
-	if (mm < 10) mm = '0' + mm;
-	if (hh < 10) hh = '0' + hh;
-	if (nn < 10) nn = '0' + nn;
-
-	return yy + '-' + mm + '-' + dd + 'T' + hh + ':' + nn + ':00.000Z';
-}
-
-function _createItem(args, cb){
-	args = args || {};
-	client.createItemRequest(args, function(err,res){
-		cb(err,res);
-	});
-}
-
-function _getSettings(args, cb){
-	args = args || {};
-	client.getSettingsRequest(args, function(err,res){
-		cb(err,res);
-	});
-}
-
-function _checkStatusCode(res){
-	var code = res.status.code;
-	return (code == 0);
-}
-
-function _parseStatus(res){
-	var e = new error.obj();
-
-	console.error(res);
-	return e;
-}
-
-function _getContainer(folders, type){
-	var id = '';
-	folders.forEach(function(folder){
-		if(folder.name === type){
-			id = folder.id;
-		}
-	});
-
-	return id;
-}
-
-function _clearUser(){
-	user = new User();
-}
-
-function _getProxy(session){
-	var obj = {};
-	if(user.proxies.length > 0){
-		obj = _.findWhere(user.proxies,{session: session});
-	}
-	return obj;
-}
-
-function _getSession(){
-	var headers = client.getSoapHeaders();
-
-	var str = headers[0];
-	var a = str.indexOf('>');
-
-	if(a > -1){
-		str = str.slice((a + 1),str.length);
-		a = str.indexOf('<');
-		if(a > -1){
-			str = str.slice(0,a);
-		}
-	}
-	return str;
-}
-
-function _setSession(id){
-	client.clearSoapHeaders();
-
-	if(id){
-		client.addSoapHeader('<session xmlns="http://schemas.novell.com/2005/01/GroupWise/types">' + id + '</session>');
-	}
-}
-
-function _setFilter(opts){
-	var filter = new Filter();
-
-	filter.element.op = opts.op;
-	filter.element.field = opts.field;
-	filter.element.value = opts.value;
-	if(opts.date) filter.element.date = opts.date;
-
-	return filter;
-}
-
-function _getId(res,ref){
-	var id = '';
-	res.forEach(function (item) {
-		if (item.folderType == ref) {
-			id = item.id;
-		}
-	});
-
-	return id;
 }
 
 function _checkSetParams(params, type) {
@@ -208,6 +85,122 @@ function _checkSetParams(params, type) {
 	}
 }
 
+function _checkStatusCode(res){
+	var code = res.status.code;
+	return (code == 0);
+}
+
+function _clearUser(){
+	user = new User();
+}
+
+function _createItem(args, cb){
+	args = args || {};
+	client.createItemRequest(args, function(err,res){
+		cb(err,res);
+	});
+}
+
+function _cursor(id,cb){
+	cursor.retrieve(client, id, function (err, res) {
+		cb(err,res);
+	});
+}
+
+function _init(cb){
+	soap.createClient(url, function (err, c) {
+		if (err) {
+			cb(err, null);
+		} else {
+			client = c;
+			client.setEndpoint(endpoint);
+
+			client.on('request',function(xml){
+				if(debug) console.info(xml);
+			});
+			var res = {
+				message: 'Successfully Created Service Client'
+			};
+			cb(null,res);
+		}
+	});
+}
+
+function _getDateTimeStr(dt){
+
+	if (dt instanceof Date) {
+	} else {
+		dt = new Date(dt);
+	}
+
+	var yy = dt.getFullYear();
+	var mm = dt.getMonth() + 1;
+	var dd = dt.getDate();
+
+	var hh = dt.getHours();
+	var nn = dt.getMinutes();
+
+	if (dd < 10) dd = '0' + dd;
+	if (mm < 10) mm = '0' + mm;
+	if (hh < 10) hh = '0' + hh;
+	if (nn < 10) nn = '0' + nn;
+
+	return yy + '-' + mm + '-' + dd + 'T' + hh + ':' + nn + ':00.000Z';
+}
+
+function _getSettings(args, cb){
+	args = args || {};
+	client.getSettingsRequest(args, function(err,res){
+		cb(err,res);
+	});
+}
+
+function _getContainer(folders, type){
+	var id = '';
+	folders.forEach(function(folder){
+		if(folder.name === type){
+			id = folder.id;
+		}
+	});
+
+	return id;
+}
+
+function _getProxy(session){
+	var obj = {};
+	if(user.proxies.length > 0){
+		obj = _.findWhere(user.proxies,{session: session});
+	}
+	return obj;
+}
+
+function _getSession(){
+	var headers = client.getSoapHeaders();
+
+	var str = headers[0];
+	var a = str.indexOf('>');
+
+	if(a > -1){
+		str = str.slice((a + 1),str.length);
+		a = str.indexOf('<');
+		if(a > -1){
+			str = str.slice(0,a);
+		}
+	}
+	return str;
+}
+
+function _getId(res,ref){
+	var id = '';
+	res.forEach(function (item) {
+		if (item.folderType == ref) {
+			id = item.id;
+		}
+	});
+
+	return id;
+}
+
 function _getAppointments(items){
 	var events = [];
 	items.forEach(function(item){
@@ -215,19 +208,6 @@ function _getAppointments(items){
 	});
 
 	return events;
-}
-
-function _login(args, cb) {
-	client.loginRequest(args, function (err, res) {
-		cb(err,res);
-	});
-}
-
-function _logout(cb){
-	var args = {};
-	client.logoutRequest(args, function (err, res) {
-		cb(err,res);
-	});
 }
 
 function _getProxyList(cb){
@@ -262,9 +242,17 @@ function _getRuleList(cb) {
 		if (err) {
 			cb(err, null);
 		} else {
-			cb(null, res.rules.rule);
+			cb(null, res);
 		}
 	});
+}
+
+function _setSession(id){
+	client.clearSoapHeaders();
+
+	if(id){
+		client.addSoapHeader('<session xmlns="http://schemas.novell.com/2005/01/GroupWise/types">' + id + '</session>');
+	}
 }
 
 function _startFreeBusySession(args,cb){
@@ -300,11 +288,7 @@ function _getTimezoneList(cb) {
 	})
 }
 
-function _getItem(id, cb) {
-	var args = {
-		id: id,
-		view: 'default peek'
-	};
+function _getItem(args, cb) {
 	client.getItemRequest(args, function (err, res) {
 		cb(err,res);
 	});
@@ -320,12 +304,43 @@ function _getItems(id,filter, cb) {
 	});
 }
 
-function _modifyItem(args, cb) {
-	args = args || {};
+function _login(args, cb) {
+	client.loginRequest(args, function (err, res) {
+		cb(err,res);
+	});
+}
 
+function _logout(cb){
+	var args = {};
+	client.logoutRequest(args, function (err, res) {
+		cb(err,res);
+	});
+}
+
+function _modifyItem(args, cb) {
 	client.modifyItemRequest(args, function (err, res) {
 		cb(err,res);
 	})
+}
+
+function _parseResponse(res){
+	if(res.folders) return res.folders.folder;
+	if(res.blocks) return res.blocks.block;
+	if(res.items) return res.items.item;
+	if(res.timezones) return res.timezones.timezone;
+	if(res.books) return  res.books.book;
+	if(res.settings) return res.settings.group;
+	if(res.rules) return res.rules.rule;
+	if(res.proxies) return res.proxies.proxy;
+
+	else return res;
+}
+
+function _parseStatus(res){
+	var e = new error.obj();
+
+	console.error(res);
+	return e;
 }
 
 function _removeItem(args,cb){
@@ -337,11 +352,22 @@ function _removeItem(args,cb){
 }
 
 function _sendItem(args,cb){
-	args = args || {};
 	client.sendItemRequest(args,function(err,res){
 		cb(err,res);
 	})
 }
+
+function _setFilter(opts){
+	var filter = new Filter();
+
+	filter.element.op = opts.op;
+	filter.element.field = opts.field;
+	filter.element.value = opts.value;
+	if(opts.date) filter.element.date = opts.date;
+
+	return filter;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Public Methods
 
@@ -378,19 +404,30 @@ GWS.prototype.removeAppointment = function(id,cb){
 GWS.prototype.updateAppointment = function(params,cb){
 	var e = new error.obj();
 	var obj = {};
-	var ses = _getSession();
-
-	if (ses == user.session){
-		obj = user;
-	} else {
-		obj = _getProxy(ses);
-	}
 
 	var args = {
-		container: _getContainer(obj.folders,'Calendar'),
 		id: params.id,
-		updates: params.updates
+		updates: {}
 	};
+
+	if(params.update){
+		if(params.update.startDate && params.update.startDate instanceof Date) {
+			params.update.startDate = params.update.startDate.toISOString();
+		}
+		if(params.update.endDate && params.update.endDate instanceof Date) {
+			params.update.endDate = params.update.endDate.toISOString();
+		}
+
+		args.updates.update = params.update;
+	}
+	if(params.add){
+		args.updates.add = params.add;
+	}
+	if(params.delete){
+		args.updates.delete = params.delete;
+	}
+
+	console.log(args);
 
 	_modifyItem(args,function(err,res){
 		if(err){
@@ -432,11 +469,14 @@ GWS.prototype.createAppointment = function(params,cb){
 			startDate: params.start.toISOString(),
 			endDate: params.end.toISOString(),
 			subject: params.subject || '',
-			message: params.message || '',
+			message: params.message,
 			allDayEvent: params.allDay || false,
 			place: params.place || user.info.name
 		}
 	};
+
+	console.log(args);
+
 	_createItem(args,function(err,res){
 		if(err){
 			e.message = 'Fail To Create Appointment';
@@ -454,58 +494,124 @@ GWS.prototype.createAppointment = function(params,cb){
 	});
 };
 
-GWS.prototype.getUserFreeBusy = function(str,start,end,cb){
+GWS.prototype.getAppointment = function(id,cb){
+	var e = new error.obj();
+	var args = {
+		id: id,
+		view: 'default'
+	};
+
+	_getItem(args,function(err,res){
+		if(err){
+			e.message = 'Error Occurred';
+			e.code = -1;
+			e.subErr = err;
+			cb(e,null);
+		} else {
+			if(_checkStatusCode(res)){
+				cb(null,res);
+			} else {
+				e = _parseStatus(res);
+				cb(e,null);
+			}
+		}
+	});
+};
+
+GWS.prototype.getRulesList = function(cb){
 	var e = new error.obj();
 
-	var dts = _getDateTimeStr(start);
-	var dtn = _getDateTimeStr(end);
+	_getRuleList(function(err,res){
+		if(err){
+			e.message = '';
+			e.code = -1;
+			e.subErr = err;
+			cb(err,null);
+		} else {
+			if(_checkStatusCode(res)){
+				res = _parseResponse(res);
+				cb(null,res);
+			} else {
+				e = _parseStatus(res);
+				cb(e,null);
+			}
+		}
+	})
+};
 
-	if(str){
-		var args = {
-			users:[{
-					user: {
-						displayName: str
-					}
-				}
-			],
-			startDate: dts,
-			endDate: dtn
-		};
+GWS.prototype.getTimeZones = function(cb){
+	var e = new error.obj();
+	_getTimezoneList(function(err,res){
+		if (err){
+			e.message = '';
+			e.code = -1;
+			e.subErr = err;
+			cb(e,null);
+		} else {
+			if(_checkStatusCode(res)){
+				res = _parseResponse(res);
+				cb(null,res);
+			} else {
+				e = _parseStatus(res);
+				cb(e,null);
+			}
+		}
+	});
+};
 
-		_startFreeBusySession(args,function(err,res){
-			if(err){
+GWS.prototype.getUserFreeBusy = function(params,cb){
+	var e = new error.obj();
+
+	var args = {
+		users:[{
+			user: {
+				displayName: params.id
+			}
+		}],
+		startDate: _getDateTimeStr(params.start),
+		endDate: _getDateTimeStr(params.end)
+	};
+
+	console.info(args);
+
+	_startFreeBusySession(args,function(err,res){
+		if(err){
 				cb(err,null);
 			} else {
-				if(_checkStatusCode(res.status.code)){
-					var id = res.freeBusySessionId;
-					_getFreeBusySession(id,function(err,res){
+			if(_checkStatusCode(res)){
+				var id = res.freeBusySessionId;
+				_getFreeBusySession(id,function(err,res){
 						if(err){
 							cb(err,null);
 						} else {
 							var result = res;
 							_closeFreeBusySession(id,function(err,res){
 								var items = [];
-								result.freeBusyInfo.user.forEach(function(item){
-									item.blocks.block.forEach(function(b){
-										items.push(b);
+								if(result.freeBusyInfo && result.freeBusyInfo.user){
+									result.freeBusyInfo.user.forEach(function(item){
+										item = _parseResponse(item);
+										item.forEach(function(b){
+											items.push(b);
+										});
 									});
-								});
-								cb(err,items);
+									cb(err,items);
+								} else {
+									cb(err,result);
+								}
+
+
 							});
 						}
 					});
-				} else {
+			} else {
 					e.message = 'Error Occurred :: ' + res.status.description;
 					e.code = res.status.code;
 					e.subErr = res.status.problems.entry;
 					e.params = user;
 					cb(e,null);
 				}
-			}
-		});
-	} else {
-
-	}
+		}
+	});
 };
 
 GWS.prototype.getProxyList = function(cb){
@@ -513,14 +619,21 @@ GWS.prototype.getProxyList = function(cb){
 
 	if(user.loggedIn){
 		_getProxyList(function(err,res){
-			if(res.proxies){
-				cb(null,res.proxies.proxy)
+			if(err){
+				cb(err,null);
 			} else {
-				cb(err,res);
+				if(_checkStatusCode(res)){
+					res = _parseResponse(res);
+					cb(null,res);
+				} else {
+					e = _parseStatus(res);
+					cb(e,null);
+				}
 			}
 		});
 	} else {
 		e.message = 'Not Logged In';
+		e.code = -1;
 		cb(e,null);
 	}
 };
@@ -539,10 +652,9 @@ GWS.prototype.getAddressBooks = function (cb) {
 				res = _parseResponse(res);
 				cb(null, res);
 			} else {
-
+				e = _parseStatus(res);
+				cb(e,null);
 			}
-
-
 		}
 	});
 };
@@ -557,11 +669,17 @@ GWS.prototype.getAddressBook = function (id, cb) {
 				e.subErr = err;
 				cb(e, null);
 			} else {
-				cb(null, res);
+				if(_checkStatusCode(res)){
+					cb(null, res);
+				} else {
+					e = _parseStatus(res);
+					cb(e,null);
+				}
 			}
 		});
 	} else {
 		e.message = 'No ID was passed in';
+		e.code = -1;
 		cb(e, null);
 	}
 };
@@ -572,28 +690,64 @@ GWS.prototype.getGlobalAddressBook = function (cb) {
 	_getAddressBookList(function (err, res) {
 		if (err) {
 			e.message = 'Failed To Get Address Book List';
+			e.code = -1;
 			e.subErr = err;
 			cb(e, null);
 		} else {
-			var id = '';
-			res.forEach(function (item) {
-				if (item.name === 'GroupWise Address Book') {
-					id = item.id;
-				}
-			});
-			if (id.length > 0) {
-				cursor.retrieve(client, id, function (err, res) {
-					if (err) {
-						e.message = 'Failed To Get Global Address Book';
-						e.subErr = err;
-						cb(e, null);
-					} else {
-						cb(null, res);
-					}
+			if(_checkStatusCode(res)){
+				var id = '';
+				res.forEach(function (item) {
+					if (item.name === 'GroupWise Address Book') id = item.id;
 				});
+				if (id.length > 0) {
+					_cursor(id, function (err,res) {
+						if(err){
+							cb(err,null);
+						} else {
+							if(_checkStatusCode(res)){
+								cb(null,res);
+							} else {
+								e = _parseStatus(res);
+								cb(e,null);
+							}
+						}
+					});
+				} else {
+					e.message = 'Failed To Find Global Address Book In Address List';
+					e.code = -1;
+					cb(e, null);
+				}
 			} else {
-				e.message = 'Failed To Find Global Address Book In Address List';
-				cb(e, null);
+				e = _parseStatus(res);
+				cb(e,null);
+			}
+		}
+	});
+};
+
+GWS.prototype.getSettings = function(cb){
+	var e = new error.obj();
+	_getSettings({},function(err,res){
+		if(err){
+			e.message = '';
+			e.code = -1;
+			e.subErr = err;
+			cb(e,null);
+		} else {
+			if(_checkStatusCode(res)){
+				res = _parseResponse(res);
+				var items = [];
+				res.forEach(function(item){
+					var t = {};
+					t.name = item.attributes.type;
+					t.setting = item.setting;
+					items.push(t);
+				});
+
+				cb(null,items);
+			} else {
+				e = _parseStatus(res);
+				cb(e,null);
 			}
 		}
 	});
@@ -667,10 +821,7 @@ GWS.prototype.getFolders = function (cb) {
 GWS.prototype.getCalendar = function (opts, cb) {
 	var e = new error.obj();
 
-	if (typeof opts === 'function') {
-		cb = opts;
-		opts = null;
-	}
+	if (typeof opts === 'function') { cb = opts; opts = null;}
 
 	_getFolderList(function (err, res) {
 		if (err) {
@@ -691,8 +842,13 @@ GWS.prototype.getCalendar = function (opts, cb) {
 							e.subErr = err;
 							cb(e, null);
 						} else {
-							var items = _getAppointments(res);
-							cb(null, items);
+							if(_checkStatusCode(res)){
+								var items = _getAppointments(res);
+								cb(null, items);
+							} else {
+								e = _parseStatus(res);
+								cb(e,null);
+							}
 						}
 					});
 				} else {
@@ -727,19 +883,16 @@ GWS.prototype.init = function (opts, cb) {
 		endpoint = 'http://' + opts.server + ':' + opts.port.toString() +  '/soap';
 	}
 
-	soap.createClient(url, function (err, c) {
-		if (err) {
+	_init(function(err,res){
+		if(err){
 			e.message = 'Failed To Create SOAP Client';
 			e.subErr = err;
-			cb(e, null);
+			cb(e,null);
 		} else {
-			client = c;
-			client.setEndpoint(endpoint);
-			cb(null, {
-				message: 'Successfully Created Service Client'
-			})
+			cb(null,res);
 		}
-	});
+	})
+
 };
 
 GWS.prototype.login = function (params, cb) {
@@ -787,6 +940,7 @@ GWS.prototype.login = function (params, cb) {
 	} else {
 		e.message = error.getParamError(params);
 		e.params = params;
+		e.code = -1;
 		self.emit('error', e);
 		cb(e, null);
 	}
@@ -830,7 +984,6 @@ GWS.prototype.proxyLogin = function (params, cb) {
 						user.proxies.push((proxy));
 						cb(err, proxy);
 					});
-
 				} else {
 					e = _parseStatus(res);
 					e.args = params;
@@ -854,6 +1007,7 @@ GWS.prototype.setSession = function (id,cb) {
 		cb(null,{msg: 'ok'});
 	} else {
 		e.message = 'No ID specified';
+		e.code = -1;
 		cb(e,null);
 	}
 };
@@ -871,18 +1025,27 @@ GWS.prototype.logout = function (cb) {
 				self.emit('error', e);
 				cb(e, null);
 			} else {
-				_clearUser();
-				client.clearSoapHeaders();
-				cb(null, res);
+				if(_checkStatusCode(res)){
+					_clearUser();
+					client.clearSoapHeaders();
+					cb(null, res);
+				} else {
+					e = _parseStatus(res);
+					cb(e,null);
+				}
 			}
 		});
 	} else {
 		e.message = 'Not Logged In To Server';
+		e.code = -1;
 		self.emit('error', e);
 		cb(e, null);
 	}
 };
 
+GWS.prototype.debug = function(bool){
+	debug = bool;
+};
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 

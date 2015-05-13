@@ -1,19 +1,20 @@
 A simple node module for connecting to a Novell Groupwise Server using SOAP.
 It was written primarily for the purpose of getting a "Resource" calendar's events to display on a touch panel outside a room.
 
-07May2015:
-Currently this module is not fully functioning.  
+13May2015:
+Currently this module some basic functionality.  
 It is a module that I will be updating daily (Mon-Fri) until it is completed.  
-NOTE: This is my very first public module, so it may have lots of issues and not well written. Its a learning process. 
-Expect changes to how it operates to occur.
+
+*NOTE: This is my very first public module, so it may have lots of issues and not well written. Its a learning process. 
+Expect changes to how it operates to occur.*
 
 Additional Documentation:
 -------------------------
 Novell GroupWise SOAP Service Documentation available at:
-[Novell Developer] (https://www.novell.com/developer/ndk/groupwise/groupwise_web_service_%28soap%29.html)
+[Novell Website] (https://www.novell.com/developer/ndk/groupwise/groupwise_web_service_%28soap%29.html)
 
 
----------------------
+-------------------------
 
 How To Use:
 ======================
@@ -31,12 +32,14 @@ var gws = new GWS();
 ```
 (Note: Currently, this module only supports one instance of the module.)
 
----------------------
+-------------------------
 
 GroupWise Methods:
 ======================
  
-- init(): Execute this method first before anything else:
+- init()
+-------------------------
+Execute this method first before anything else:
 ```
 var args = {
 		server: '172.16.76.2',            // Required
@@ -51,8 +54,11 @@ var args = {
 		}
 	});
 ```
----------------------
-- login(): Is used to authenticate to a POA.  
+-------------------------
+
+- login()
+-------------------------
+Is used to authenticate to a POA.  
  Note: Trusted Application is currently not supported but will be coming soon.
  Note: Applications cannot log in to GroupWise resources. To access resources data, log in as the owner of the resource and then proxy into the resource.
 
@@ -71,8 +77,11 @@ var args = {
 		}
 	});
 ```
----------------------
-- proxyLogin(): To login as an authorized proxy of another user's account. 
+-------------------------
+
+- proxyLogin()
+-------------------------
+ To login as an authorized proxy of another user's account. 
                 You must first login is as the primary user before running the proxy login.
                 Note: The domain and po will be automatically added to the proxy user.
 
@@ -87,12 +96,15 @@ var args = {
 			...
 		}
 	});
- ```
+```
 ---------------------
-  - setSession(): Sets the specific session you want to use.  By default, the primary account session id is used.
+
+- setSession()
+-------------------------
+  Sets the specific session you want to use.  By default, the primary account session id is used.
   The id is the unique key generated and stored in the return object from the proxyLogin method;
    
-  ```
+```
   var id = 's#df%#FR';
   gws.setSession(id,function(err,res){
     if(err){
@@ -101,10 +113,13 @@ var args = {
    		...
    	}
   });
-  ```
- ---------------------
- - logout(): Will logout of the primary user's session. This will remove any and all proxy sessions
-  ```
+```
+---------------------
+
+- logout()
+-------------------------
+  Will logout of the primary user's session. This will remove any and all proxy sessions
+```
   gws.logout(function (err, res) {
   		if (err) {
   			...
@@ -112,10 +127,13 @@ var args = {
   			...
   		}
   	});
-  ```
+```
 ---------------------
- - getFolders(): Gets a list of folders.
-  ```
+
+- getFolders()
+-------------------------
+ Gets a list of folders.
+```
   gws.getFolders(function (err, res) {
      if(err) {
        ...
@@ -123,10 +141,13 @@ var args = {
        ...
      }
    });
-  ```
+```
 ---------------------
- - getResources(): Will return any item from the global address book that is marked as a resource.
-   ```
+
+- getResources()
+-------------------------
+ Will return any item from the global address book that is marked as a resource.
+```
    gws.getResources(function (err, res) {
      if(err) {
        ...
@@ -134,10 +155,13 @@ var args = {
        ...
      }
    });
-   ```
+```
 ---------------------
- - getProxyList(): Will return an array of user objects that the current logged in user can proxy into.
-  ```
+
+- getProxyList()
+-------------------------
+ Will return an array of user objects that the current logged in user can proxy into.
+```
   gws.getProxyList(function (err, res) {
     if(err) {
       ...
@@ -145,15 +169,22 @@ var args = {
        ...
     }
   });
-  ```
+```
 ---------------------
- - getUserFreeBusy(): Returns a specified user's calendar events in between a start and end time frame.  
+
+- getUserFreeBusy()
+-------------------------
+ Returns a specified user's calendar events in between a start and end time frame.  
   *Here I want to get events between now and 3 days from now*
-  ```
-  var user = 'Conference Room 3'; // Use the "displayName" of the user
+```
   var start = new Date();
   var end = new Date();
-  end.setDate(end.getDate() + 3);
+  end.setDate(start.getHours() + 3);
+  var params = {
+  	id: 'Conference Room 2',
+  	start: start,
+  	end: end
+  };
   gws.getUserFreeBusy(user,start,end,function(err,res){
   	if(err){
   		...
@@ -161,10 +192,13 @@ var args = {
   		...
   	}
   });
-  ```
+```
 ---------------------
- - getCalendar(): Returns calendar events for the main calendar
- ```
+ 
+- getCalendar()
+-------------------------
+ Returns calendar events for the main calendar
+```
   gws.getCalendar(function (err, res) {
   	if (err) {
   		...
@@ -172,10 +206,10 @@ var args = {
   		...
   	}
   });
- ```
+```
  If you want to filter your results, then use the opts object.  
  *Here I want to get events from 2 days ago and newer*
- ```
+```
   var dt = new Date();
 	dt.setDate(dt.getDate() - 2);
 	var dts = gws.getDateTimeStr(dt);  
@@ -191,10 +225,13 @@ var args = {
 	    ...
 	  }
 	});
- ```
+```
 ---------------------
- - createAppointment(): Creates a new appointment and returns that appointments id.
- ```
+
+- createAppointment()
+-------------------------
+ Creates a new appointment and returns that appointments id.
+```
  var params = {
  		subject: <string>,
  		message: <string>,
@@ -210,10 +247,39 @@ var args = {
  			...
  		}
  	});
- ```
+```
 ---------------------
- - removeAppointment(): Removes an appointment from the calendar.
- ```
+
+- updateAppointment()
+-------------------------
+ Updates an existing appointment.
+```
+ var params = {
+ 		id: <string>,             // Required
+ 		update: {
+ 		  <field>:<value>
+ 		},
+ 		add: {
+ 		  <field>:<value>
+ 		},
+ 		delete: {
+ 		  <field>:<value>
+ 		}
+ 	};
+ 	gws.updateAppointment(params,function(err,res){
+ 		if(err){
+ 			...
+ 		} else {
+ 			...
+ 		}
+ 	});
+```
+---------------------
+
+- removeAppointment()
+-------------------------
+ Removes an appointment from the calendar.
+```
  var id = <string>
  	gws.removeAppointment(id,function(err,res){
  		if(err){
@@ -222,9 +288,12 @@ var args = {
  			...
  		}
  	});
- ```
+```
 ---------------------
- - getGlobalAddressBook(): Returns the users accessable global address book.
+
+- getGlobalAddressBook()
+-------------------------
+  Returns the users accessible global address book.
 ```
   gws.getGlobalAddressBook(function (err, res) {
     if(err) {
@@ -234,10 +303,23 @@ var args = {
     }
   });
 ```
-
-(NOTE:  More methods are coming in the following days.)
-
 ---------------------
+
+- getSettings()
+-------------------------
+ Returns the users settings.
+```
+  gws.getSettings(function (err, res) {
+    if(err) {
+      ...
+    } else {
+      ...
+    }
+  });
+```
+
+-------------------------
+-------------------------
 
 GroupWise Callbacks:
 ======================
@@ -248,7 +330,7 @@ On method callbacks, if there is an error, the error object this contain these p
  - subErr: If the error was produced by a dependency module, its error will be placed into here
  - params: Contains the parameters that was passed into the method.
  
----------------------
+-------------------------
 
 GroupWise Events:
 ======================
@@ -256,7 +338,7 @@ GroupWise Events:
 Events generated by this module are as follows
 
 Error:
----------------------
+-------------------------
 ```
 	gws.on('error',function(err){
 		// ...
@@ -264,7 +346,7 @@ Error:
 ```
 
 Response:
----------------------
+-------------------------
 ```
 	gws.on('response', function(res){
 		//...

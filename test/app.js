@@ -49,35 +49,14 @@ function collect() {
 	});
 }
 
-function CollectProxiesByResources() {
-	var ids = [];
-
-	for(var i in resources){
-		console.log(resources[i]);
-		if(resources[i].owner == creds.user) ids.push(resources[i].name)
-	}
-
-	if(ids.length > 0){
-		async.mapSeries(ids,ProxyLogin,function(err,results){
-			if(err){
-				console.error(err);
-			} else {
-				console.info(results);
-				proxies = results;
-				gws.setSession(proxies[1].session,function(err,res){
-					if(err){
-
-					} else {
-						console.info(res);
-						collect();
-					}
-				})
-			}
-		});
-	}
+function GetRndMinSec(val){
+	if(val < 15) return 0;
+	else if (val < 30) return 15;
+	else if (val < 45) return 30;
+	else return 45;
 }
 
-function CollectProxiesByList() {
+function BuildProxySessions() {
 	var ids = [];
 
 	for(var i in proxyList){
@@ -130,11 +109,24 @@ function ProxyLogin(id, cb) {
 
 function GetFreeBusy() {
 	var start = new Date();
-	var dt = new Date();
-	dt.setDate(dt.getDate() + 3);
-	var end = gws.getDateTimeStr(dt);
+	var end = new Date();
+	end.setDate(start.getDate() + 1);
 
-	gws.getUserFreeBusy('Conference Room 3',start,end,function(err,res){
+	start.setHours(0);
+	start.setMinutes(0);
+	start.setSeconds(0);
+
+	end.setHours(0);
+	end.setMinutes(0);
+	end.setSeconds(0);
+	
+	var params = {
+		id: 'Conference Room 2',
+		start: start,
+		end: end
+	};
+
+	gws.getUserFreeBusy(params,function(err,res){
 		if(err){
 			console.error(err);
 		} else {
@@ -149,7 +141,7 @@ function GetProxyList(){
 			console.error(err);
 		} else {
 			proxyList = res;
-			CollectProxiesByList();
+			BuildProxySessions();
 		}
 	});
 }
@@ -164,18 +156,13 @@ function CreateAppointment(){
 	var start = new Date();
 	var end = new Date();
 
-	var min = start.getMinutes();
-	var val = 0;
-
-	if(min < 15) val = 0;
-	else if (min < 30) val = 15;
-	else if (min < 45) val = 30;
-	else val = 45;
-
-	start.setMinutes(val);
+	start.setMinutes(GetRndMinSec(start.getMinutes()));
+	start.setSeconds(GetRndMinSec(start.getSeconds()));
 
 	end.setHours(start.getHours() + 3);
-	end.setMinutes(val);
+	
+	end.setMinutes(GetRndMinSec(end.getMinutes()));
+	end.setSeconds(GetRndMinSec(end.getSeconds()));
 
 	var params = {
 		subject: 'A SOAP Created Meeting',
@@ -183,7 +170,7 @@ function CreateAppointment(){
 		start: start,
 		end: end,
 		allDay: false,
-		place: 'Conference Room 1'
+		place: 'Conference Room 2'
 	};
 
 	gws.createAppointment(params,function(err,res){
@@ -191,7 +178,53 @@ function CreateAppointment(){
 			console.error(err);
 		} else {
 			console.info(res.id[0]);
-			RemoveAppointment(res.id[0]);
+			var id = res.id[0];
+
+			gws.getAppointment(id,function(err,res){
+				if(err) console.error(err);
+				else console.info(res.item);
+			});
+
+			setTimeout(function(){
+				UpdateAppointment(id);
+			},10000);
+
+		}
+	});
+}
+
+function UpdateAppointment(id){
+
+	var start = new Date();
+	var min = start.getMinutes();
+
+	start.setHours(start.getHours() + 2);
+	start.setMinutes(GetRndMinSec(start.getMinutes()));
+	start.setSeconds(GetRndMinSec(start.getSeconds()));
+
+	var params = {
+		id: id,
+		update: {
+			startDate: start
+		}
+	};
+
+	gws.updateAppointment(params,function(err,res){
+		if(err){
+			console.error(err);
+		} else {
+			console.info(res);
+		}
+	});
+}
+
+function GetSettings() {
+	gws.getSettings(function(err,res){
+		if(err) console.error(err);
+		else {
+			res.forEach(function(item){
+				console.log(item);
+			});
 		}
 	});
 }
@@ -206,17 +239,35 @@ function RemoveAppointment(id){
 	});
 }
 
+function Debug(){
+	gws.debug(true);
+}
+
+function GetTimeZones(){
+	gws.getTimeZones(function(err,res){
+		if(err) console.error(err);
+		else console.info(res);
+	})
+}
+
 function GetCalendar(){
 	gws.getCalendar(function(err,res){
 		if(err){
 			console.error(err);
 		} else {
-			Logout();
 		}
 	});
 }
 
-function run() {
+function GetRulesList(){
+	gws.getRulesList(function(err,res){
+		if(err) console.error(err);
+		else console.info(res);
+	});
+}
+
+function RunMeFirst() {
+
 	gws.init(host, function (err, res) {
 		if (err) {
 			console.error(err);
@@ -225,7 +276,10 @@ function run() {
 				if (err) {
 					console.error(err);
 				} else {
-					GetProxyList();
+					//GetFreeBusy();
+					//GetSettings();
+					GetRulesList();
+					//GetProxyList();
 				}
 			});
 		}
@@ -240,4 +294,4 @@ gws.on('error', function (e) {
 	console.error('Got An Error At ' + new Date());
 });
 
-run();
+RunMeFirst();
