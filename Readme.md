@@ -203,13 +203,13 @@ createAppointment()
 -------------------------
  Creates a new appointment and returns that appointments id.
 ```
- var params = {
- 		subject: <string>,
- 		message: <string>,
- 		start: <date>,
- 		end: <date>,
- 		allDay: <bool>,
- 		place: <string>
+	var params = {
+    subject: <string>,
+ 	  message: <string>,
+ 	  start: <date>,
+ 	  end: <date>,
+ 	  allDay: <bool>,
+ 	  place: <string>
  	};
  	gws.createAppointment(params,function(err,res){
  		...
