@@ -1018,12 +1018,16 @@ GWS.prototype.login = function (params, cb) {
 	}
 };
 
-GWS.prototype.proxyLogin = function (params, cb) {
+GWS.prototype.proxyLogin = function (param, cb) {
 	var self = this;
 	var e = new error.obj();
 	var proxy = new Proxy();
 
-	if (user.loggedIn && _checkSetParams(params, 2)) {
+	var opts = {
+		proxy: param
+	};
+
+	if (user.loggedIn && _checkSetParams(opts, 2)) {
 		var args = {
 			auth:   {
 				attributes: {

@@ -57,13 +57,13 @@ Execute this method first before anything else:
 login()
 -------------------------
 Is used to authenticate to a POA (Post Office Agent).  
-If successful, it returns a user object which contains:
-	- session: <string>
-	- info: <object>
-	- version: <string>
-	- build: <string>
-	- serverUtcTime: <date>
-	- folders: <objects> (array)  
+If successful, it returns a user object which contains:  
+- session: <string>
+- info: <object>
+- version: <string>
+- build: <string>
+- serverUtcTime: <date>
+- folders: <objects> (array)  
 Note: The session is automatically set to the primary user after log in.  
 Note: Trusted Application is currently not supported.  
 Note: Applications cannot log in to GroupWise resources. To access resources data, log in as the owner of the resource and then proxy into the resource.
@@ -83,15 +83,13 @@ Note: Applications cannot log in to GroupWise resources. To access resources dat
 
 proxyLogin()
 -------------------------
-To login as an authorized proxy of another user's account.  
+Used to login as an authorized proxy of another user's account.  
 You must first login is as the primary user before running the proxy login.  
 Note: The domain and po will be automatically added to the proxy user.
 
 ```
-  var args = {
-		proxy: <string> // Required - Name of User
-	};
-	gws.proxyLogin(args, function (err, res) {
+	var proxy: <string> // Required - Name of User
+	gws.proxyLogin(proxy, function (err, res) {
 		...
 	});
 ```
@@ -100,12 +98,12 @@ Note: The domain and po will be automatically added to the proxy user.
 initProxies()
 -------------------------
 Will initialize all available proxies that the logged in user has access to.  
-The return object will contain an array of those proxies, each containing:
-	- session: <string>
-	- uid: <string>
-	- folders: <objects> (array)
-	- info: <object>
-	- entry: <object>  
+The return object will contain an array of those proxies, each containing:  
+- session: <string>
+- uid: <string>
+- folders: <objects> (array)
+- info: <object>
+- entry: <object>  
 Note: You must be logged in first before running this method.
 
 ```
