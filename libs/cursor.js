@@ -5,18 +5,14 @@
 var client = {};
 
 var CreateCursor = function (id, cb, filter) {
-
 	var args = {
 		container: id
 	};
 
-	if (filter) {
-		args.filter = filter;
-	}
+	if (filter) args.filter = filter;
 
 	client.createCursorRequest(args, function (err, res) {
 		if (err) {
-			console.error(err);
 			cb(err, null)
 		} else {
 			cb(null, res);

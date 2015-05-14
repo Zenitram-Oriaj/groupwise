@@ -41,9 +41,9 @@ GroupWise Methods:
  
 init()
 -------------------------
-Execute this method first before anything else:
+	Execute this method first before anything else:
 ```
-var args = {
+	var args = {
 		server: <string>,    // Required - IP Address of server
 		port:   <number>,    // Optional - TCP Port of SOAP Service (Defaults to 7191)
 		wsdl:   <string>     // Optional - Location of the Groupwise WSDL file
@@ -56,12 +56,20 @@ var args = {
 
 login()
 -------------------------
- Is used to authenticate to a POA (Post Office Agent).  
- Note: Trusted Application is currently not supported.  
- Note: Applications cannot log in to GroupWise resources. To access resources data, log in as the owner of the resource and then proxy into the resource.
+	Is used to authenticate to a POA (Post Office Agent).  
+	If successful, it returns a user object which contains:
+	- session: <string>
+	- info: <object>
+	- version: <string>
+	- build: <string>
+	- serverUtcTime: <date>
+	- folders: [<objects>]  
+	Note: The session is automatically set to the primary user after log in.  
+	Note: Trusted Application is currently not supported.  
+	Note: Applications cannot log in to GroupWise resources. To access resources data, log in as the owner of the resource and then proxy into the resource.
 
 ```	
-  var args = {		
+	var args = {		
     user:    <string>,  // Required	
     pass:    <string>,  // Required		
     lang:    <string>,  // Optional (Default: en)		
@@ -89,11 +97,29 @@ proxyLogin()
 ```
 ---------------------
 
+initProxies()
+-------------------------
+	Will initialize all available proxies that the logged in user has access to.  
+	The return object will contain an array of those proxies, each containing:
+	- session: <string>
+	- uid: <string>
+	- folders: [<objects>]
+	- info: <object>
+	- entry: <object>  
+	Note: You must be logged in first before running this method.
+
+```
+	gws.initProxies(function (err, res) {
+		...
+	});
+```
+---------------------
+
 setSession()
 -------------------------
-  Sets the specific session you want to use.  
-  By default, the primary account session id is used.
-  The id is the unique key generated and stored in the return object from the proxyLogin method.
+	Sets the specific session you want to use.  
+	By default, the primary account session id is used.  
+	The id is the unique key generated and stored in the return object from the proxyLogin method.
    
 ```
   var id = <string>;
@@ -105,8 +131,8 @@ setSession()
 
 logout()
 -------------------------
-  Will logout of the primary user's session.  
-  Note: This will remove any and all proxy sessions as well.
+	Will logout of the primary user's session.  
+	Note: This will remove any and all proxy sessions as well.
 ```
   gws.logout(function (err, res) {
     ...
@@ -114,19 +140,9 @@ logout()
 ```
 ---------------------
 
-getFolders()
--------------------------
- Gets a list of folder objects such as Calendar, Mail, Address Book, etc...
-```
-	gws.getFolders(function (err, res) {
-    ...
-  });
-```
----------------------
-
 getResources()
 -------------------------
- Will return any item from the global address book that is marked as a resource.
+	Will return any item from the global address book that is marked as a resource.
 ```
 	gws.getResources(function (err, res) {
     ...
@@ -136,7 +152,7 @@ getResources()
 
 getProxyList()
 -------------------------
- Will return an array of user objects that the current logged in user can proxy into.
+	Will return an array of user objects that the current logged in user can proxy into.
 ```
   gws.getProxyList(function (err, res) {
     ...
@@ -146,7 +162,7 @@ getProxyList()
 
 getUserFreeBusy()
 -------------------------
- Returns a specified user's calendar events in between a start and end time frame.  
+	Returns a specified user's calendar events in between a start and end time frame.  
 ```
  var params = {
  	id: <string>,
@@ -158,7 +174,7 @@ getUserFreeBusy()
  });
 ```
  
-  *Example: Get events between now and 3 days from now*
+	*Example: Get events between now and 3 days from now*
 ```
   var start = new Date();
   var end = new Date();
@@ -176,14 +192,14 @@ getUserFreeBusy()
  
 getCalendar()
 -------------------------
- Returns calendar events for the main calendar
+	Returns calendar events for the main calendar
 ```
   gws.getCalendar(function (err, res) {
   	...
   });
 ```
- If you want to filter your results, then use the opts object.  
- *Example: Get events from 2 days ago and newer*
+	If you want to filter your results, then use the opts object.  
+	*Example: Get events from 2 days ago and newer*
 ```
   var dt = new Date();
 	dt.setDate(dt.getDate() - 2);
@@ -201,7 +217,7 @@ getCalendar()
 
 createAppointment()
 -------------------------
- Creates a new appointment and returns that appointments id.
+	Creates a new appointment and returns that appointments id.
 ```
 	var params = {
     subject: <string>,
@@ -219,7 +235,7 @@ createAppointment()
 
 updateAppointment()
 -------------------------
- Updates an existing appointment.
+	Updates an existing appointment.
 ```
  var params = {
  		id: <string>,             // Required
@@ -241,7 +257,7 @@ updateAppointment()
 
 removeAppointment()
 -------------------------
- Removes an appointment from the calendar.
+	Removes an appointment from the calendar.
 ```
  var id = <string>
  	gws.removeAppointment(id,function(err,res){
@@ -252,7 +268,7 @@ removeAppointment()
 
 getGlobalAddressBook()
 -------------------------
-  Returns the users accessible global address book.
+	Returns the users accessible global address book.
 ```
   gws.getGlobalAddressBook(function (err, res) {
     ...
@@ -262,7 +278,7 @@ getGlobalAddressBook()
 
 getSettings()
 -------------------------
- Returns the users settings.
+	Returns the users settings.
 ```
   gws.getSettings(function (err, res) {
     ...
@@ -275,11 +291,11 @@ getSettings()
 GroupWise Callbacks:
 ======================
 
-On method callbacks, if there is an error, the error object this contain these parameters:
- - message: A general statement of the error
- - code: a number value representing the error.
- - subErr: If the error was produced by a dependency module, its error will be placed into here
- - params: Contains the parameters that was passed into the method.
+	On method callbacks, if there is an error, the error object this contain these parameters:
+	- message: A general statement of the error
+	- code: a number value representing the error.
+	- subErr: If the error was produced by a dependency module, its error will be placed into here
+	- params: Contains the parameters that was passed into the method.
  
 
 -------------------------
@@ -288,8 +304,7 @@ On method callbacks, if there is an error, the error object this contain these p
 
 GroupWise Events:
 ======================
- 
-Events generated by this module are as follows
+	Events generated by this module are as follows
 
 Error:
 -------------------------

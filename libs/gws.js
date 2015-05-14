@@ -127,6 +127,31 @@ function _init(cb){
 	});
 }
 
+function _initProxies(cb){
+	var list = [];
+
+	_getProxyList(function(err,res){
+		if(err) cb(err,null);
+		else {
+			res = _parseResponse(res);
+
+			for(var i in res){
+				list.push(res[i].displayName)
+			}
+
+			if(list.length > 0){
+				async.mapSeries(list,_loginProxy,function(err,proxies){
+					if(err){
+						cb(err,null);
+					} else {
+						cb(null,proxies);
+					}
+				});
+			}
+		}
+	});
+}
+
 function _getDateTimeStr(dt){
 
 	if (dt instanceof Date) {
@@ -308,6 +333,40 @@ function _getItems(id,filter, cb) {
 function _login(args, cb) {
 	client.loginRequest(args, function (err, res) {
 		cb(err,res);
+	});
+}
+
+function _loginProxy(id, cb) {
+	var proxy = new Proxy();
+	var pid = id + '.' + user.info.postOffice + '.' + user.info.domain;
+	var args = {
+		auth:   {
+			attributes: {
+				'xsi_type': {
+					xmlns: 'types',
+					type:  'Proxy'
+				}
+			},
+			username:   user.creds.user,
+			password:   user.creds.pass,
+			proxy:      pid
+		},
+		userid: true
+	};
+
+	client.loginRequest(args, function (err, res) {
+		if(err) cb(err,null);
+		else {
+			proxy.uid = pid;
+			proxy.session = res.session;
+			proxy.info = res.userinfo;
+			proxy.entry = res.entry;
+
+			_afterLogin(proxy, function (err) {
+				user.proxies.push(proxy);
+				cb(err, proxy);
+			});
+		}
 	});
 }
 
@@ -799,26 +858,6 @@ GWS.prototype.getResources = function(cb){
 	});
 };
 
-GWS.prototype.getFolders = function (cb) {
-	var e = new error.obj();
-
-	_getFolderList(function (err, res) {
-		if (err) {
-			e.message = 'Failed To Get Folder List';
-			e.subErr = err;
-			cb(e, null);
-		} else {
-			if(_checkStatusCode(res)){
-				res = _parseResponse(res);
-				cb(null, res);
-			} else {
-				e = _parseStatus(res);
-				cb(e,res);
-			}
-		}
-	});
-};
-
 GWS.prototype.getCalendar = function (opts, cb) {
 	var e = new error.obj();
 
@@ -902,6 +941,26 @@ GWS.prototype.init = function (opts, cb) {
 	}
 };
 
+GWS.prototype.initProxies = function (cb) {
+	var e = new error.obj();
+
+	if(user.loggedIn){
+		_initProxies(function(err,res){
+			if(err){
+				e.message = '';
+				e.code = -1;
+				cb(e,null);
+			} else {
+				cb(null,res)
+			}
+		});
+	} else {
+		e.message = 'You need to be logged in a primary user first';
+		e.code = -1;
+		cb(e,null);
+	}
+};
+
 GWS.prototype.login = function (params, cb) {
 	var self = this;
 	var e = new error.obj();
@@ -925,17 +984,23 @@ GWS.prototype.login = function (params, cb) {
 
 		_login(args, function (err, res) {
 			if (err) {
-				self.emit('error', err);
 				cb(err, null)
 			} else {
 				if(_checkStatusCode(res)){
 					user.loggedIn = true;
 					user.info = res.userinfo;
 					user.session = res.session;
-					var dat = res;
+					var dat = {
+						session: res.session,
+						info: res.userinfo,
+						version: res.gwVersion,
+						build: res.build,
+						serverUtcTime: res.serverUTCTime
+					};
+
 					_setSession(user.session);
 					_afterLogin(user, function(err,res){
-						self.emit('response', dat);
+						dat.folders = res.folders;
 						cb(err, dat);
 					});
 				} else {

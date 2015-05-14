@@ -276,10 +276,21 @@ function RunMeFirst() {
 				if (err) {
 					console.error(err);
 				} else {
+					console.info(res);
 					//GetFreeBusy();
 					//GetSettings();
-					GetRulesList();
+					//GetRulesList();
 					//GetProxyList();
+
+					gws.initProxies(function(err,res){
+						console.error('///////////////////////////////////////////////////////');
+						if(err) console.error(err);
+						else {
+							res.forEach(function(item){
+								console.info(item);
+							});
+						}
+					});
 				}
 			});
 		}
