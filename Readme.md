@@ -119,11 +119,11 @@ setSession()
 -------------------------
 Sets the specific session you want to use.  
 By default, the primary account session id is used.  
-The id is the unique key generated and stored in the return object from the proxyLogin method.
+The "key" is the unique id generated and stored in the return object from the login/initProxies method.
    
 ```
-  var id = <string>;
-  gws.setSession(id,function(err,res){
+  var key = <string>;
+  gws.setSession(key,function(err,res){
     ...
   });
 ```
