@@ -1,11 +1,11 @@
 A simple node module for connecting to a Novell Groupwise Server using SOAP.
-It was written primarily for the purpose of getting a "Resource" calendar's events to display on a touch panel outside a room.
+It was written primarily for the purpose of getting a "Resource" calendar's events.
 
 13May2015:
 Currently this module some basic functionality.  
 It is a module that I will be updating daily (Mon-Fri) until it is completed.  
 
-*NOTE: This is my very first public module, so it may have lots of issues and not well written. Its a learning process. 
+*NOTE: This is my very first public module, so it may have lots of issues. Its a learning process. 
 Expect changes to how it operates to occur.*
 
 Additional Documentation:
@@ -24,7 +24,7 @@ How To Use:
 npm install groupwise
 ```
 
-In your app.js file:
+In your node javascript file header:
 
 ```
 var GWS = require('groupwise');
@@ -33,6 +33,8 @@ var gws = new GWS();
 (Note: Currently, this module only supports one instance of the module.)
 
 -------------------------
+-------------------------
+
 
 GroupWise Methods:
 ======================
@@ -42,105 +44,83 @@ init()
 Execute this method first before anything else:
 ```
 var args = {
-		server: '172.16.76.2',            // Required
-		port:   '7191',                   // Required
-		wsdl:   '../wsdl/groupwise.wsdl'  // Optional (Location of the Groupwise WSDL file)
+		server: <string>,    // Required - IP Address of server
+		port:   <number>,    // Optional - TCP Port of SOAP Service (Defaults to 7191)
+		wsdl:   <string>     // Optional - Location of the Groupwise WSDL file
 	};
 	gws.init(args, function (err, res) {
-		if (err) {
-			...
-		} else {
-			...
-		}
+		...
 	});
 ```
 -------------------------
 
 login()
 -------------------------
-Is used to authenticate to a POA.  
- Note: Trusted Application is currently not supported but will be coming soon.
+ Is used to authenticate to a POA (Post Office Agent).  
+ Note: Trusted Application is currently not supported.  
  Note: Applications cannot log in to GroupWise resources. To access resources data, log in as the owner of the resource and then proxy into the resource.
 
 ```	
   var args = {		
-    user: 'ao',       // Required	
-    pass: '!boi123',  // Required		
-    lang: 'en',       // Optional (Default: en)		
-    version: '1.05'   // Optional (Default: 1.05)	
+    user:    <string>,  // Required	
+    pass:    <string>,  // Required		
+    lang:    <string>,  // Optional (Default: en)		
+    version: <string>   // Optional (Default: 1.05)	
   };
 	gws.login(args, function (err, res) {
-		if (err) {
-			...
-		} else {
-			...
-		}
+		...
 	});
 ```
 -------------------------
 
 proxyLogin()
 -------------------------
- To login as an authorized proxy of another user's account. 
-                You must first login is as the primary user before running the proxy login.
-                Note: The domain and po will be automatically added to the proxy user.
+	To login as an authorized proxy of another user's account.  
+	You must first login is as the primary user before running the proxy login.  
+	Note: The domain and po will be automatically added to the proxy user.
 
 ```
   var args = {
-		proxy: 'Conference Room 1'
+		proxy: <string> // Required - Name of User
 	};
 	gws.proxyLogin(args, function (err, res) {
-		if (err) {
-			...
-		} else {
-			...
-		}
+		...
 	});
 ```
 ---------------------
 
 setSession()
 -------------------------
-  Sets the specific session you want to use.  By default, the primary account session id is used.
-  The id is the unique key generated and stored in the return object from the proxyLogin method;
+  Sets the specific session you want to use.  
+  By default, the primary account session id is used.
+  The id is the unique key generated and stored in the return object from the proxyLogin method.
    
 ```
-  var id = 's#df%#FR';
+  var id = <string>;
   gws.setSession(id,function(err,res){
-    if(err){
-      ...
-   	} else {
-   		...
-   	}
+    ...
   });
 ```
 ---------------------
 
 logout()
 -------------------------
-  Will logout of the primary user's session. This will remove any and all proxy sessions
+  Will logout of the primary user's session.  
+  Note: This will remove any and all proxy sessions as well.
 ```
   gws.logout(function (err, res) {
-  		if (err) {
-  			...
-  		} else {
-  			...
-  		}
-  	});
+    ...
+  });
 ```
 ---------------------
 
 getFolders()
 -------------------------
- Gets a list of folders.
+ Gets a list of folder objects such as Calendar, Mail, Address Book, etc...
 ```
-  gws.getFolders(function (err, res) {
-     if(err) {
-       ...
-     } else {
-       ...
-     }
-   });
+	gws.getFolders(function (err, res) {
+    ...
+  });
 ```
 ---------------------
 
@@ -148,13 +128,9 @@ getResources()
 -------------------------
  Will return any item from the global address book that is marked as a resource.
 ```
-   gws.getResources(function (err, res) {
-     if(err) {
-       ...
-     } else {
-       ...
-     }
-   });
+	gws.getResources(function (err, res) {
+    ...
+  });
 ```
 ---------------------
 
@@ -163,11 +139,7 @@ getProxyList()
  Will return an array of user objects that the current logged in user can proxy into.
 ```
   gws.getProxyList(function (err, res) {
-    if(err) {
-      ...
-    } else {
-       ...
-    }
+    ...
   });
 ```
 ---------------------
@@ -175,7 +147,18 @@ getProxyList()
 getUserFreeBusy()
 -------------------------
  Returns a specified user's calendar events in between a start and end time frame.  
-  *Here I want to get events between now and 3 days from now*
+```
+ var params = {
+ 	id: <string>,
+ 	start: <date>,
+ 	end: <date>
+ };
+ gws.getUserFreeBusy(params,function(err,res){
+ 	...
+ });
+```
+ 
+  *Example: Get events between now and 3 days from now*
 ```
   var start = new Date();
   var end = new Date();
@@ -185,12 +168,8 @@ getUserFreeBusy()
   	start: start,
   	end: end
   };
-  gws.getUserFreeBusy(user,start,end,function(err,res){
-  	if(err){
-  		...
-  	} else {
-  		...
-  	}
+  gws.getUserFreeBusy(params,function(err,res){
+  	...
   });
 ```
 ---------------------
@@ -200,15 +179,11 @@ getCalendar()
  Returns calendar events for the main calendar
 ```
   gws.getCalendar(function (err, res) {
-  	if (err) {
-  		...
-  	} else {
-  		...
-  	}
+  	...
   });
 ```
  If you want to filter your results, then use the opts object.  
- *Here I want to get events from 2 days ago and newer*
+ *Example: Get events from 2 days ago and newer*
 ```
   var dt = new Date();
 	dt.setDate(dt.getDate() - 2);
@@ -219,11 +194,7 @@ getCalendar()
 	  value: dts
 	};
 	gws.getCalendar(opts, function (err, res) {
-		if (err) {
-	    ...
-	  } else {
-	    ...
-	  }
+		...
 	});
 ```
 ---------------------
@@ -238,14 +209,10 @@ createAppointment()
  		start: <date>,
  		end: <date>,
  		allDay: <bool>,
- 		place: <string>'
+ 		place: <string>
  	};
  	gws.createAppointment(params,function(err,res){
- 		if(err){
- 			...
- 		} else {
- 			...
- 		}
+ 		...
  	});
 ```
 ---------------------
@@ -267,11 +234,7 @@ updateAppointment()
  		}
  	};
  	gws.updateAppointment(params,function(err,res){
- 		if(err){
- 			...
- 		} else {
- 			...
- 		}
+ 		...
  	});
 ```
 ---------------------
@@ -282,11 +245,7 @@ removeAppointment()
 ```
  var id = <string>
  	gws.removeAppointment(id,function(err,res){
- 		if(err){
- 			...
- 		} else {
- 			...
- 		}
+ 		...
  	});
 ```
 ---------------------
@@ -296,11 +255,7 @@ getGlobalAddressBook()
   Returns the users accessible global address book.
 ```
   gws.getGlobalAddressBook(function (err, res) {
-    if(err) {
-      ...
-    } else {
-      ...
-    }
+    ...
   });
 ```
 ---------------------
@@ -310,11 +265,7 @@ getSettings()
  Returns the users settings.
 ```
   gws.getSettings(function (err, res) {
-    if(err) {
-      ...
-    } else {
-      ...
-    }
+    ...
   });
 ```
 

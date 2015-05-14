@@ -19,6 +19,7 @@ var error = require('./error');
 
 var client = {};
 var url = path.join(__dirname, '../wsdl/groupwise.wsdl');
+var port = 7191;
 var endpoint = 'http://localhost:7191/soap';
 
 var Filter = require('./filter');
@@ -872,27 +873,33 @@ GWS.prototype.getCalendar = function (opts, cb) {
 };
 
 GWS.prototype.init = function (opts, cb) {
-	var self = this;
 	var e = new error.obj();
 
-	if (opts && opts.wsdl) {
-		url = opts.wsdl;
+	if(opts){
+		if (opts.wsdl) url = opts.wsdl;
+		if (opts.port) port = opts.port;
+		if (opts.server) endpoint = 'http://' + opts.server + ':' + port.toString() +  '/soap';
+		_init(function(err,res){
+			if(err){
+				e.message = 'Failed To Create SOAP Client';
+				e.code = -1;
+				e.subErr = err;
+				e.params = opts;
+				cb(e,null);
+			} else {
+				cb(null,res);
+			}
+		});
+	} else {
+		e.message = 'Missing options object';
+		e.code = -1;
+		e.params = {
+			server: '',
+			port:   7191,
+			wsdl:   ''
+		};
+		cb(e, null);
 	}
-
-	if (opts && opts.server) {
-		endpoint = 'http://' + opts.server + ':' + opts.port.toString() +  '/soap';
-	}
-
-	_init(function(err,res){
-		if(err){
-			e.message = 'Failed To Create SOAP Client';
-			e.subErr = err;
-			cb(e,null);
-		} else {
-			cb(null,res);
-		}
-	})
-
 };
 
 GWS.prototype.login = function (params, cb) {
