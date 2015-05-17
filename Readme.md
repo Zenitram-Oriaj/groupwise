@@ -43,15 +43,23 @@ init()
 -------------------------
 Execute this method first before anything else:
 ```
+	var client = {};       // Optional
 	var args = {
 		server: <string>,    // Required - IP Address of server
 		port:   <number>,    // Optional - TCP Port of SOAP Service (Defaults to 7191)
 		wsdl:   <string>     // Optional - Location of the Groupwise WSDL file
 	};
 	gws.init(args, function (err, res) {
+		client = res;
 		...
 	});
 ```
+
+The return object is the soap client itself.  
+This is useful if there are methods that are not currently implemented in this module but you need access to.  
+To see available methods, either refer to the the SOAP Documentation on the Novell Site or print out the return object to your console.  
+Each method requires you to pass an argument object even if the method does not require that object. Simply pass a empty object to the method.
+
 -------------------------
 
 login()

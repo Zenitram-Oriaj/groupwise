@@ -119,10 +119,7 @@ function _init(cb){
 			client.on('request',function(xml){
 				if(debug) console.info(xml);
 			});
-			var res = {
-				message: 'Successfully Created Service Client'
-			};
-			cb(null,res);
+			cb(null,client);
 		}
 	});
 }

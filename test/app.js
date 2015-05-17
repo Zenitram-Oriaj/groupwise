@@ -8,6 +8,7 @@ var async = require('async');
 var GWS = require('../libs/gws');
 var gws = new GWS();
 
+var client = {};
 var proxies = [];
 var resources = [];
 var proxyList = [];
@@ -272,16 +273,13 @@ function RunMeFirst() {
 		if (err) {
 			console.error(err);
 		} else {
+			client = res;
+			console.log(res);
+
 			gws.login(creds, function (err, res) {
 				if (err) {
 					console.error(err);
 				} else {
-					console.info(res);
-					//GetFreeBusy();
-					//GetSettings();
-					//GetRulesList();
-					//GetProxyList();
-
 					gws.initProxies(function(err,res){
 						console.error('///////////////////////////////////////////////////////');
 						if(err) console.error(err);
