@@ -1,7 +1,13 @@
 A simple node module for connecting to a Novell Groupwise Server using SOAP.
 It was written primarily for the purpose of getting a "Resource" calendar's events.
 
-13May2015:
+History
+-------------------------
+- 17May2015:
+This module is currently on hold for a bit. I should be returning back to it soon. 
+Because of this, I have now returned the SOAP client in the init method so that you can run methods I have not currently implemented.
+
+- 13May2015:  
 Currently this module some basic functionality.  
 It is a module that I will be updating daily (Mon-Fri) until it is completed.  
 
